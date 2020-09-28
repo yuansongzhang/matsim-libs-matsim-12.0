@@ -61,21 +61,30 @@ import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
 
 /**
- * "Designed for inheritance."
- * Extend this class, overwrite configure, and use the methods of this class to
- * install your module.
- * <p></p>
+ * "Designed for inheritance." Extend this class, overwrite configure, and use
+ * the methods of this class to install your module.
+ * <p>
+ * </p>
  * See comments in subclasses.
- * <p></p>
- * AbstractModule is a custom version of com.google.inject.Module, with the following differences:<ul>
- * <li> AbstractModule is a bit more restrictive.
- * <li> AbstractModule already has the config (as getConfig() ), which is helpful since the config contains material that
- * has to be used to configure the services.
+ * <p>
+ * </p>
+ * AbstractModule is a custom version of com.google.inject.Module, with the
+ * following differences:
+ * <ul>
+ * <li>AbstractModule is a bit more restrictive.
+ * <li>AbstractModule already has the config (as getConfig() ), which is helpful
+ * since the config contains material that has to be used to configure the
+ * services.
  * </ul>
  *
  * @author michaz
  */
-public abstract class AbstractModule implements Module {
+
+ /**
+  * Yuansong Zhang 
+  * learning
+  */
+ public abstract class AbstractModule implements Module {
 
 	private Binder binder;
 	private Multibinder<EventHandler> eventHandlerMultibinder;
@@ -102,18 +111,17 @@ public abstract class AbstractModule implements Module {
 		if (this.config == null) {
 			this.config = bootstrapInjector.getInstance(Config.class);
 		}
-		// Guice error messages should give the code location of the error in the user's module,
+		// Guice error messages should give the code location of the error in the user's
+		// module,
 		// not in this class.
 		this.binder = binder.skipSources(AbstractModule.class);
 		this.mobsimListenerMultibinder = Multibinder.newSetBinder(this.binder, MobsimListener.class);
 		this.snapshotWriterMultibinder = Multibinder.newSetBinder(this.binder, SnapshotWriter.class);
 		this.eventHandlerMultibinder = Multibinder.newSetBinder(this.binder, EventHandler.class);
 		this.controlerListenerMultibinder = Multibinder.newSetBinder(this.binder, ControlerListener.class);
-		this.attributeConverterMapBinder =
-				MapBinder.newMapBinder(
-						this.binder,
-						new TypeLiteral<Class<?>>(){},
-						new TypeLiteral<AttributeConverter<?>>() {} );
+		this.attributeConverterMapBinder = MapBinder.newMapBinder(this.binder, new TypeLiteral<Class<?>>() {
+		}, new TypeLiteral<AttributeConverter<?>>() {
+		});
 		this.qsimModulesMultibinder = Multibinder.newSetBinder(this.binder, AbstractQSimModule.class);
 		this.install();
 	}
@@ -132,11 +140,11 @@ public abstract class AbstractModule implements Module {
 	protected final LinkedBindingBuilder<EventHandler> addEventHandlerBinding() {
 		return eventHandlerMultibinder.addBinding();
 	}
-	
+
 	protected final void installQSimModule(AbstractQSimModule qsimModule) {
 		qsimModulesMultibinder.addBinding().toInstance(qsimModule);
 	}
-	
+
 	/**
 	 * @see ControlerListener
 	 */
@@ -148,10 +156,12 @@ public abstract class AbstractModule implements Module {
 	 * @see StrategyManagerModule
 	 */
 	protected final com.google.inject.binder.LinkedBindingBuilder<PlanSelector<Plan, Person>> bindPlanSelectorForRemoval() {
-		return bind(new TypeLiteral<PlanSelector<Plan, Person>>(){});
+		return bind(new TypeLiteral<PlanSelector<Plan, Person>>() {
+		});
 	}
 
-	protected final com.google.inject.binder.LinkedBindingBuilder<PlanStrategy> addPlanStrategyBinding(String selectorName) {
+	protected final com.google.inject.binder.LinkedBindingBuilder<PlanStrategy> addPlanStrategyBinding(
+			String selectorName) {
 		return binder().bind(PlanStrategy.class).annotatedWith(Names.named(selectorName));
 	}
 
@@ -171,15 +181,16 @@ public abstract class AbstractModule implements Module {
 		return snapshotWriterMultibinder.addBinding();
 	}
 
-	protected final LinkedBindingBuilder<AttributeConverter<?>> addAttributeConverterBinding(final Class<?> clazz ) {
-		return attributeConverterMapBinder.addBinding( clazz );
+	protected final LinkedBindingBuilder<AttributeConverter<?>> addAttributeConverterBinding(final Class<?> clazz) {
+		return attributeConverterMapBinder.addBinding(clazz);
 	}
+
 	/**
 	 * @deprecated better use {@link #addTravelDisutilityFactoryBinding(String)}.
 	 */
 	@Deprecated
 	protected final com.google.inject.binder.LinkedBindingBuilder<TravelDisutilityFactory> bindCarTravelDisutilityFactory() {
-		return addTravelDisutilityFactoryBinding( TransportMode.car );
+		return addTravelDisutilityFactoryBinding(TransportMode.car);
 	}
 
 	@SuppressWarnings("static-method")
@@ -187,7 +198,8 @@ public abstract class AbstractModule implements Module {
 		return Key.get(TravelDisutilityFactory.class, Names.named(TransportMode.car));
 	}
 
-	protected final com.google.inject.binder.LinkedBindingBuilder<TravelDisutilityFactory> addTravelDisutilityFactoryBinding(String mode) {
+	protected final com.google.inject.binder.LinkedBindingBuilder<TravelDisutilityFactory> addTravelDisutilityFactoryBinding(
+			String mode) {
 		return binder().bind(TravelDisutilityFactory.class).annotatedWith(Names.named(mode));
 	}
 
@@ -240,7 +252,8 @@ public abstract class AbstractModule implements Module {
 		return binder.getProvider(Key.get(typeLiteral));
 	}
 
-	public static AbstractModule override(final Iterable<? extends AbstractModule> modules, final AbstractModule abstractModule) {
+	public static AbstractModule override(final Iterable<? extends AbstractModule> modules,
+			final AbstractModule abstractModule) {
 		return new AbstractModule() {
 			@Override
 			public void install() {
@@ -258,7 +271,8 @@ public abstract class AbstractModule implements Module {
 	public static AbstractModule emptyModule() {
 		return new AbstractModule() {
 			@Override
-			public void install() {}
+			public void install() {
+			}
 		};
 	}
 }
