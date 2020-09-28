@@ -19,7 +19,7 @@
  *                                                                         *
  * *********************************************************************** */
 
- package org.matsim.core.mobsim.framework;
+package org.matsim.core.mobsim.framework;
 
 import java.util.Collection;
 import java.util.List;
@@ -31,6 +31,10 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
 
+/**
+ * Yuansong Zhang
+ * learning
+ */
 public abstract class AbstractMobsimModule extends AbstractModule {
 	private Optional<Config> config = Optional.empty();
 	private Optional<AbstractMobsimModule> parent = Optional.empty();
