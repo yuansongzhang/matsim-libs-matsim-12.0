@@ -70,6 +70,11 @@ import org.matsim.run.CreateFullConfig;
  *
  * @author mrieser
  */
+
+/**
+ * Yuansong Zhang 
+ * learning
+ */
 public final class Config implements MatsimExtensionPoint {
 
 	// ////////////////////////////////////////////////////////////////////
@@ -80,8 +85,7 @@ public final class Config implements MatsimExtensionPoint {
 	private final TreeMap<String, ConfigGroup> modules = new TreeMap<>();
 
 	/*
-	 * the following members are for the direct access to the core config
-	 * groups.
+	 * the following members are for the direct access to the core config groups.
 	 */
 
 	// config groups that are in org.matsim.core.config.groups:
@@ -106,7 +110,7 @@ public final class Config implements MatsimExtensionPoint {
 	private SubtourModeChoiceConfigGroup subtourModeChoice = null;
 	private TravelTimeCalculatorConfigGroup travelTimeCalculatorConfigGroup = null;
 	private PtCountsConfigGroup ptCounts = null;
-	private VehiclesConfigGroup vehicles = null ;
+	private VehiclesConfigGroup vehicles = null;
 	private ChangeModeConfigGroup changeMode = null;
 	private JDEQSimConfigGroup jdeqSim = null;
 
@@ -117,7 +121,6 @@ public final class Config implements MatsimExtensionPoint {
 
 	private boolean locked = false;
 	private URL context;
-
 
 	// ////////////////////////////////////////////////////////////////////
 	// constructor
@@ -133,9 +136,9 @@ public final class Config implements MatsimExtensionPoint {
 	}
 
 	/**
-	 * Adds all the commonly used config-groups, also known as "core modules",
-	 * to this config-instance. This should be called before reading any
-	 * configuration from file.
+	 * Adds all the commonly used config-groups, also known as "core modules", to
+	 * this config-instance. This should be called before reading any configuration
+	 * from file.
 	 */
 	public void addCoreModules() {
 		this.global = new GlobalConfigGroup();
@@ -163,7 +166,7 @@ public final class Config implements MatsimExtensionPoint {
 		this.modules.put(HouseholdsConfigGroup.GROUP_NAME, this.households);
 
 		this.parallelEventHandling = new ParallelEventHandlingConfigGroup();
-		this.modules.put(ParallelEventHandlingConfigGroup.GROUP_NAME, this.parallelEventHandling );
+		this.modules.put(ParallelEventHandlingConfigGroup.GROUP_NAME, this.parallelEventHandling);
 
 		this.facilities = new FacilitiesConfigGroup();
 		this.modules.put(FacilitiesConfigGroup.GROUP_NAME, this.facilities);
@@ -181,11 +184,11 @@ public final class Config implements MatsimExtensionPoint {
 		this.modules.put(PlansCalcRouteConfigGroup.GROUP_NAME, this.plansCalcRoute);
 
 		this.timeAllocationMutator = new TimeAllocationMutatorConfigGroup();
-		this.modules.put(TimeAllocationMutatorConfigGroup.GROUP_NAME, this.timeAllocationMutator );
+		this.modules.put(TimeAllocationMutatorConfigGroup.GROUP_NAME, this.timeAllocationMutator);
 
 		this.vspExperimentalGroup = new VspExperimentalConfigGroup();
 		this.modules.put(VspExperimentalConfigGroup.GROUP_NAME, this.vspExperimentalGroup);
-		
+
 		this.ptCounts = new PtCountsConfigGroup();
 		this.modules.put(PtCountsConfigGroup.GROUP_NAME, this.ptCounts);
 
@@ -199,10 +202,10 @@ public final class Config implements MatsimExtensionPoint {
 		this.modules.put(TransitRouterConfigGroup.GROUP_NAME, this.transitRouter);
 
 		this.subtourModeChoice = new SubtourModeChoiceConfigGroup();
-		this.modules.put( SubtourModeChoiceConfigGroup.GROUP_NAME , this.subtourModeChoice );
-		
-		this.vehicles = new VehiclesConfigGroup() ;
-		this.modules.put( VehiclesConfigGroup.GROUP_NAME , this.vehicles ) ;
+		this.modules.put(SubtourModeChoiceConfigGroup.GROUP_NAME, this.subtourModeChoice);
+
+		this.vehicles = new VehiclesConfigGroup();
+		this.modules.put(VehiclesConfigGroup.GROUP_NAME, this.vehicles);
 
 		this.changeMode = new ChangeModeConfigGroup();
 		this.modules.put(ChangeModeConfigGroup.CONFIG_MODULE, this.changeMode);
@@ -219,8 +222,8 @@ public final class Config implements MatsimExtensionPoint {
 	}
 
 	/**
-	 * Checks each module for consistency, e.g. if the parameters that are
-	 * currently set make sense in their combination.
+	 * Checks each module for consistency, e.g. if the parameters that are currently
+	 * set make sense in their combination.
 	 */
 	public void checkConsistency() {
 		for (ConfigGroup m : this.modules.values()) {
@@ -229,13 +232,15 @@ public final class Config implements MatsimExtensionPoint {
 		for (ConfigConsistencyChecker c : this.consistencyCheckers) {
 			c.checkConsistency(this);
 		}
-//        for (Module m : this.modules.values()) {
-//            if (m.getClass() == Module.class) {
-//                throw new RuntimeException("Config group " + m.getName() + " is present, but has never been read." +
-//                        "This is probably an error: You may be expecting functionality which is not available." +
-//                        "Maybe you need to add something to the Controler?");
-//            }
-//        }
+		// for (Module m : this.modules.values()) {
+		// if (m.getClass() == Module.class) {
+		// throw new RuntimeException("Config group " + m.getName() + " is present, but
+		// has never been read." +
+		// "This is probably an error: You may be expecting functionality which is not
+		// available." +
+		// "Maybe you need to add something to the Controler?");
+		// }
+		// }
 	}
 
 	// ////////////////////////////////////////////////////////////////////
@@ -245,12 +250,11 @@ public final class Config implements MatsimExtensionPoint {
 	/**
 	 * Creates a new module / config-group with the specified name.
 	 *
-	 * @param name
-	 *            The name of the config-group to be created.
+	 * @param name The name of the config-group to be created.
 	 *
 	 * @return the newly created config group
-	 * @throws IllegalArgumentException
-	 *             if a config-group with the specified name already exists.
+	 * @throws IllegalArgumentException if a config-group with the specified name
+	 *                                  already exists.
 	 */
 	public final ConfigGroup createModule(final String name) {
 		if (this.modules.containsKey(name)) {
@@ -264,17 +268,20 @@ public final class Config implements MatsimExtensionPoint {
 	/**
 	 * Adds the specified module / config-group with the specified name to the
 	 * configuration.
-	 * <p></p>
-	 * This is the typical way to "materialize" material that, so far, exists only as Map, into a specialized module.
+	 * <p>
+	 * </p>
+	 * This is the typical way to "materialize" material that, so far, exists only
+	 * as Map, into a specialized module.
+	 * 
 	 * @param specializedConfigModule
 	 *
-	 * @throws IllegalArgumentException
-	 *             if a config-group with the specified name already exists.
+	 * @throws IllegalArgumentException if a config-group with the specified name
+	 *                                  already exists.
 	 */
 	public final void addModule(final ConfigGroup specializedConfigModule) {
 		String name = specializedConfigModule.getName();
 		if (name == null || name.isEmpty()) {
-			throw new RuntimeException("cannot insert module with empty name") ;
+			throw new RuntimeException("cannot insert module with empty name");
 		}
 		// The logic is as follows:
 		// (1) assume that module is some SpecializedConfigModule that extends Module
@@ -312,8 +319,8 @@ public final class Config implements MatsimExtensionPoint {
 	}
 
 	/**
-	 * Removes the specified module / config-group with the specified name from
-	 * the configuration. Does nothing if this module was not existing.
+	 * Removes the specified module / config-group with the specified name from the
+	 * configuration. Does nothing if this module was not existing.
 	 *
 	 * @param name
 	 *
@@ -338,25 +345,23 @@ public final class Config implements MatsimExtensionPoint {
 	 * Returns the requested module, or <code>null</code> if the module does not
 	 * exist.
 	 *
-	 * @param moduleName
-	 *            name of the requested module
+	 * @param moduleName name of the requested module
 	 * @return requested module
 	 */
-	@Deprecated // please try to use the "typed" access structures.  kai, nov'16
+	@Deprecated // please try to use the "typed" access structures. kai, nov'16
 	public final ConfigGroup getModule(final String moduleName) {
 		return this.modules.get(moduleName);
 	}
 
 	/**
-	 * Returns the requested parameter. If the module or parameter is not known,
-	 * an error is logged and an IllegalArgumentException is thrown.
+	 * Returns the requested parameter. If the module or parameter is not known, an
+	 * error is logged and an IllegalArgumentException is thrown.
 	 *
 	 * @param moduleName
 	 * @param paramName
 	 * @return the requested parameter
 	 *
-	 * @throws IllegalArgumentException
-	 *             if the module or parameter does not exist
+	 * @throws IllegalArgumentException if the module or parameter does not exist
 	 * @see #findParam(String, String)
 	 */
 	@Deprecated // use "typed" config group instead
@@ -379,10 +384,8 @@ public final class Config implements MatsimExtensionPoint {
 	 * Returns the value of the specified parameter if it exists, or
 	 * <code>null</code> otherwise.
 	 *
-	 * @param moduleName
-	 *            name of the config-module
-	 * @param paramName
-	 *            name of parameter in the specified module
+	 * @param moduleName name of the config-module
+	 * @param paramName  name of parameter in the specified module
 	 * @return value of the parameter if it exists, <code>null</code> otherwise
 	 *
 	 * @see #getParam(String, String)
@@ -418,8 +421,8 @@ public final class Config implements MatsimExtensionPoint {
 	// ////////////////////////////////////////////////////////////////////
 	/**
 	 * Sets the parameter <code>paramName</code> in the module/config-group
-	 * <code>moduleName</code> to the specified value. If there is no
-	 * config-group with the specified name, a new group will be created.
+	 * <code>moduleName</code> to the specified value. If there is no config-group
+	 * with the specified name, a new group will be created.
 	 *
 	 * @param moduleName
 	 * @param paramName
@@ -472,7 +475,7 @@ public final class Config implements MatsimExtensionPoint {
 		return this.facilities;
 	}
 
-    public final StrategyConfigGroup strategy() {
+	public final StrategyConfigGroup strategy() {
 		return this.strategy;
 	}
 
@@ -535,23 +538,26 @@ public final class Config implements MatsimExtensionPoint {
 	// other:
 
 	public void addConfigConsistencyChecker(final ConfigConsistencyChecker checker) {
-		boolean alreadyExists = false ;
-		for ( ConfigConsistencyChecker ch : consistencyCheckers ) {
-			if ( ch.getClass().equals( checker.getClass() ) ) {
-				alreadyExists = true ;
+		boolean alreadyExists = false;
+		for (ConfigConsistencyChecker ch : consistencyCheckers) {
+			if (ch.getClass().equals(checker.getClass())) {
+				alreadyExists = true;
 			}
 		}
-		if ( !alreadyExists ) {
+		if (!alreadyExists) {
 			this.consistencyCheckers.add(checker);
 		} else {
-			log.info( "ConfigConsistencyChecker with runtime type=" + checker.getClass() + " was already added; not adding it a second time" ) ;
+			log.info("ConfigConsistencyChecker with runtime type=" + checker.getClass()
+					+ " was already added; not adding it a second time");
 		}
 	}
 
-	public void removeConfigConsistencyChecker( final Class clazz ) {
-		// I am not saying that I like this.  But I would like to be able to check config consistency before the iterator is created, but by then we still have
-		// unmaterialized config groups, and so I need to remove that checker at that point.  Maybe we can sort this in some different way ...
-		consistencyCheckers.removeIf( ch -> ch.getClass().equals( clazz ) );
+	public void removeConfigConsistencyChecker(final Class clazz) {
+		// I am not saying that I like this. But I would like to be able to check config
+		// consistency before the iterator is created, but by then we still have
+		// unmaterialized config groups, and so I need to remove that checker at that
+		// point. Maybe we can sort this in some different way ...
+		consistencyCheckers.removeIf(ch -> ch.getClass().equals(clazz));
 	}
 
 	public final boolean isLocked() {
@@ -563,16 +569,16 @@ public final class Config implements MatsimExtensionPoint {
 	}
 
 	private void checkIfLocked() {
-		if ( this.isLocked() ) {
+		if (this.isLocked()) {
 			log.error("too late in execution sequence to set config items. Use");
 			log.error("   Config config = ConfigUtils.loadConfig(filename); ");
 			log.error("   config.xxx().setYyy(...); ");
 			log.error("   Controler ctrl = new Controler( config );");
-			log.error("or") ;
+			log.error("or");
 			log.error("   Config config = ConfigUtils.loadConfig(filename); ");
 			log.error("   config.xxx().setYyy(...); ");
-			log.error("   Scenario scenario = ScenarioUtils.loadScenario(config);") ;
-			log.error("   // do something with scenario") ;
+			log.error("   Scenario scenario = ScenarioUtils.loadScenario(config);");
+			log.error("   // do something with scenario");
 			log.error("   Controler ctrl = new Controler( scenario );");
 			log.error("This will be changed to an abortive error in the future."); // kai, feb'13
 		}
@@ -581,15 +587,19 @@ public final class Config implements MatsimExtensionPoint {
 	public final VehiclesConfigGroup vehicles() {
 		return vehicles;
 	}
-	
+
 	public void setContext(URL context) {
-		if ( this.context==null  ||  !(context.toString().equals( this.context.toString() ) ) ) {
+		if (this.context == null || !(context.toString().equals(this.context.toString()))) {
 			log.info("setting context to [" + context + "]");
-			// ConfigUtils.createConfig() is used at several places, e.g. when generating an empty
-			// scenario to obtain the default factories.  This will evidently produce output here,
-			// and in some sense the wrong output, since the relevant context is probably set from
-			// some config file path and in fact _not_ changed since this here will be a different
-			// ``throwaway'' config instance.  :-(  kai, jun'18
+			// ConfigUtils.createConfig() is used at several places, e.g. when generating an
+			// empty
+			// scenario to obtain the default factories. This will evidently produce output
+			// here,
+			// and in some sense the wrong output, since the relevant context is probably
+			// set from
+			// some config file path and in fact _not_ changed since this here will be a
+			// different
+			// ``throwaway'' config instance. :-( kai, jun'18
 		}
 		this.context = context;
 	}
