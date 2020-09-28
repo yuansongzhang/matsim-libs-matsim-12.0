@@ -12,3 +12,21 @@ matsimExamples
 
 # ignore output directories:
 output/
+
+# Ignore Eclipse
+.settings/
+.project
+.factorypath
+.classpath
+
+# Ignore Maven
+target/
+
+# Ignore VS Code
+.vscode/
+
+# Ignore Output
+output/
+
+
+
