@@ -19,7 +19,7 @@
  *                                                                         *
  * *********************************************************************** */
 
- package org.matsim.core.mobsim.qsim;
+package org.matsim.core.mobsim.qsim;
 
 import java.lang.annotation.Annotation;
 import java.util.Collection;
@@ -34,6 +34,10 @@ import com.google.inject.binder.LinkedBindingBuilder;
 import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
 
+/**
+ * Yuansong Zhang
+ * learning
+ */
 public abstract class AbstractQSimModule extends AbstractMobsimModule {
 	@Override
 	protected final void configureMobsim() {
@@ -49,11 +53,12 @@ public abstract class AbstractQSimModule extends AbstractMobsimModule {
 
 	@Deprecated // for experts only
 	protected LinkedBindingBuilder<QSimComponent> addQSimComponentBinding(Class<? extends Annotation> annotationClass) {
-		Multibinder<QSimComponent> multibinder = Multibinder.newSetBinder(binder(), QSimComponent.class, annotationClass);
+		Multibinder<QSimComponent> multibinder = Multibinder.newSetBinder(binder(), QSimComponent.class,
+				annotationClass);
 		multibinder.permitDuplicates();
 		return multibinder.addBinding();
 	}
-	
+
 	protected LinkedBindingBuilder<QSimComponent> addQSimComponentBinding(String name) {
 		return addQSimComponentBinding(Names.named(name));
 	}
@@ -65,7 +70,7 @@ public abstract class AbstractQSimModule extends AbstractMobsimModule {
 	}
 
 	protected abstract void configureQSim();
-	
+
 	protected void install(AbstractQSimModule module) {
 		module.setParent(this);
 		super.install(module);
