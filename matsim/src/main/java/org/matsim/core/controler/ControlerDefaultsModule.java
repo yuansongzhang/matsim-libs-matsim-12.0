@@ -37,6 +37,9 @@ import org.matsim.guice.DependencyGraphModule;
 import org.matsim.pt.counts.PtCountsModule;
 import org.matsim.vis.snapshotwriters.SnapshotWritersModule;
 
+/**
+ * Yuansong Zhang learning
+ */
 public final class ControlerDefaultsModule extends AbstractModule {
     @Override
     public void install() {
@@ -47,8 +50,9 @@ public final class ControlerDefaultsModule extends AbstractModule {
         install(new CharyparNagelScoringFunctionModule());
         install(new TripRouterModule());
         install(new StrategyManagerModule());
-    
-        // I think that the ones coming here are all for analysis only, and thus not central to the iterations. kai, apr'18
+
+        // I think that the ones coming here are all for analysis only, and thus not
+        // central to the iterations. kai, apr'18
         install(new ExperiencedPlansModule());
         install(new LinkStatsModule());
         install(new VolumesAnalyzerModule());
@@ -63,10 +67,12 @@ public final class ControlerDefaultsModule extends AbstractModule {
         install(new SnapshotWritersModule());
         install(new DependencyGraphModule());
 
-    	/* Comment by kai (mz thinks it is not helpful): The framework eventually calls the above method, which calls the include 
-        * methods , which (fairly quickly) call their own install methods, etc.  Eventually, everything is resolved down to the
-        * "bindTo..." methods, which are the leaves.
-    	*/
+        /*
+         * Comment by kai (mz thinks it is not helpful): The framework eventually calls
+         * the above method, which calls the include methods , which (fairly quickly)
+         * call their own install methods, etc. Eventually, everything is resolved down
+         * to the "bindTo..." methods, which are the leaves.
+         */
 
     }
 }
