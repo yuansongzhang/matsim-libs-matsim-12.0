@@ -10,9 +10,6 @@ matsimExamples
 /log_projects.log
 *.orig
 
-# ignore output directories:
-output/
-
 # Ignore Eclipse
 .settings/
 .project
@@ -24,9 +21,3 @@ target/
 
 # Ignore VS Code
 .vscode/
-
-# Ignore Output
-output/
-
-
-
