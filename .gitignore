@@ -11,10 +11,11 @@ matsimExamples
 *.orig
 
 # Ignore Eclipse
-.settings/
-.project
-.factorypath
 .classpath
+.project
+.settings/
+.factorypath
+
 
 # Ignore Maven
 target/
