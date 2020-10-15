@@ -50,63 +50,76 @@ import com.google.inject.spi.Element;
 import com.google.inject.spi.Elements;
 import com.google.inject.util.Modules;
 
+/**
+ * Yuansong Zhang leaning
+ */
 public final class Injector {
-	private Injector(){} // namespace only, do not instantiate
-
+	// Class member variable
 	private static Logger logger = Logger.getLogger(Injector.class);
+
+	// Class constructor
+	private Injector() {
+	} // namespace only, do not instantiate
 
 	public static com.google.inject.Injector createInjector(final Config config, Module... modules) {
 		com.google.inject.Injector bootstrapInjector = Guice.createInjector(new Module() {
+			// Return a Module instance and override the Module configure method
 			@Override
 			public void configure(Binder binder) {
 				binder.requireExplicitBindings(); // For now, we are conservative and disable this kind of magic.
 				binder.install(new ExplodedConfigModule(config));
 			}
 		});
-		// A MATSim module needs the config at configuration time in order to decide what
-		// features to provide. So we create a bootstrapInjector which already has the config
-		// and provides it to the MATSim modules.
+		// A MATSim module needs the config at configuration time in order to decide
+		// what features to provide. So we create a bootstrapInjector which already has
+		// the config and provides it to the MATSim modules.
 		List<com.google.inject.Module> guiceModules = new ArrayList<>();
 		for (Module module : modules) {
 			bootstrapInjector.injectMembers(module);
 			guiceModules.add(module);
 		}
-		com.google.inject.Injector realInjector = bootstrapInjector.createChildInjector(insertMapBindings(guiceModules));
+		com.google.inject.Injector realInjector = bootstrapInjector
+				.createChildInjector(insertMapBindings(guiceModules));
 		printInjector(realInjector, logger);
 		return realInjector;
 	}
 
 	public static void printInjector(com.google.inject.Injector injector, Logger log) {
-		Level level = Level.INFO ;
-		log.log(level,"=== printInjector start ===") ;
+		Level level = Level.INFO;
+		log.log(level, "=== printInjector start ===");
 		for (Map.Entry<Key<?>, Binding<?>> entry : injector.getBindings().entrySet()) {
-			if ( entry.getKey().toString().contains("type=org.matsim") ) {
+			if (entry.getKey().toString().contains("type=org.matsim")) {
 				Annotation annotation = entry.getKey().getAnnotation();
-				log.log( level, entry.getKey().getTypeLiteral() + " " + (annotation != null ? annotation.toString() : ""));
+				log.log(level,
+						entry.getKey().getTypeLiteral() + " " + (annotation != null ? annotation.toString() : ""));
 				log.log(level, "  --> provider: " + entry.getValue().getProvider());
-				log.log(level, "  --> source: " + entry.getValue().getSource() );
-				if ( entry.getValue() instanceof BindingImpl ) {
-					log.log( level, "  --> scope: " + ((BindingImpl<?>)entry.getValue()).getScoping() ) ;
+				log.log(level, "  --> source: " + entry.getValue().getSource());
+				if (entry.getValue() instanceof BindingImpl) {
+					log.log(level, "  --> scope: " + ((BindingImpl<?>) entry.getValue()).getScoping());
 				}
-				if ( entry.getValue() instanceof LinkedKeyBinding) {
-					log.log( level, "  --> target: " + ((LinkedKeyBinding) entry.getValue()).getLinkedKey() ) ;
+				if (entry.getValue() instanceof LinkedKeyBinding) {
+					log.log(level, "  --> target: " + ((LinkedKeyBinding) entry.getValue()).getLinkedKey());
 				}
-				log.log(level, "  ==full==> " + entry.getValue() );
+				log.log(level, "  ==full==> " + entry.getValue());
 				// yy could probably format the above in a better way. kai, may'16
-				log.log(level,  "" );
+				log.log(level, "");
 			}
 		}
-		log.log(level,"=== printInjector end ===") ;
+		log.log(level, "=== printInjector end ===");
 	}
 
 	private static Module insertMapBindings(List<Module> guiceModules) {
-		com.google.inject.AbstractModule routingModuleBindings = createMapBindingsForType(guiceModules, RoutingModule.class);
+		com.google.inject.AbstractModule routingModuleBindings = createMapBindingsForType(guiceModules,
+				RoutingModule.class);
 		com.google.inject.AbstractModule travelTimeBindings = createMapBindingsForType(guiceModules, TravelTime.class);
-		com.google.inject.AbstractModule travelDisutilityFactoryBindings = createMapBindingsForType(guiceModules, TravelDisutilityFactory.class);
-		return Modules.combine(Modules.combine(guiceModules), routingModuleBindings, travelTimeBindings, travelDisutilityFactoryBindings);
+		com.google.inject.AbstractModule travelDisutilityFactoryBindings = createMapBindingsForType(guiceModules,
+				TravelDisutilityFactory.class);
+		return Modules.combine(Modules.combine(guiceModules), routingModuleBindings, travelTimeBindings,
+				travelDisutilityFactoryBindings);
 	}
 
-	private static <T> com.google.inject.AbstractModule createMapBindingsForType(List<Module> guiceModules, final Class<T> aClass) {
+	private static <T> com.google.inject.AbstractModule createMapBindingsForType(List<Module> guiceModules,
+			final Class<T> aClass) {
 		final Set<String> modes = new HashSet<>();
 		for (Element element : Elements.getElements(guiceModules)) {
 			element.acceptVisitor(new DefaultElementVisitor<Object>() {
