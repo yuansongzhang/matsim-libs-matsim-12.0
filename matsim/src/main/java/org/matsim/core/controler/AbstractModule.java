@@ -1,24 +1,24 @@
 /*
- *  *********************************************************************** *
- *  * project: org.matsim.*
- *  * Module.java
- *  *                                                                         *
- *  * *********************************************************************** *
- *  *                                                                         *
- *  * copyright       : (C) 2014 by the members listed in the COPYING, *
- *  *                   LICENSE and WARRANTY file.                            *
- *  * email           : info at matsim dot org                                *
- *  *                                                                         *
- *  * *********************************************************************** *
- *  *                                                                         *
- *  *   This program is free software; you can redistribute it and/or modify  *
- *  *   it under the terms of the GNU General Public License as published by  *
- *  *   the Free Software Foundation; either version 2 of the License, or     *
- *  *   (at your option) any later version.                                   *
- *  *   See also COPYING, LICENSE and WARRANTY file                           *
- *  *                                                                         *
- *  * ***********************************************************************
- */
+*  *********************************************************************** *
+*  * project: org.matsim.*
+*  * Module.java
+*  *                                                                         *
+*  * *********************************************************************** *
+*  *                                                                         *
+*  * copyright       : (C) 2014 by the members listed in the COPYING, *
+*  *                   LICENSE and WARRANTY file.                            *
+*  * email           : info at matsim dot org                                *
+*  *                                                                         *
+*  * *********************************************************************** *
+*  *                                                                         *
+*  *   This program is free software; you can redistribute it and/or modify  *
+*  *   it under the terms of the GNU General Public License as published by  *
+*  *   the Free Software Foundation; either version 2 of the License, or     *
+*  *   (at your option) any later version.                                   *
+*  *   See also COPYING, LICENSE and WARRANTY file                           *
+*  *                                                                         *
+*  * ***********************************************************************
+*/
 
 package org.matsim.core.controler;
 
@@ -80,12 +80,11 @@ import com.google.inject.util.Modules;
  * @author michaz
  */
 
- /**
-  * Yuansong Zhang 
-  * learning
-  */
- public abstract class AbstractModule implements Module {
-
+/**
+ * Yuansong Zhang learning
+ */
+public abstract class AbstractModule implements Module {
+	// Class member variable
 	private Binder binder;
 	private Multibinder<EventHandler> eventHandlerMultibinder;
 	private Multibinder<ControlerListener> controlerListenerMultibinder;
@@ -98,6 +97,7 @@ import com.google.inject.util.Modules;
 	com.google.inject.Injector bootstrapInjector;
 	private Config config;
 
+	// Class constructor
 	public AbstractModule() {
 		// config will be injected later
 	}
@@ -106,6 +106,7 @@ import com.google.inject.util.Modules;
 		this.config = config;
 	}
 
+	// Some settings
 	@Override
 	public final void configure(Binder binder) {
 		if (this.config == null) {
@@ -126,15 +127,35 @@ import com.google.inject.util.Modules;
 		this.install();
 	}
 
+	// Install other modules
 	public abstract void install();
-
-	protected final Config getConfig() {
-		return config;
-	}
 
 	protected final void install(Module module) {
 		bootstrapInjector.injectMembers(module);
 		binder.install(module);
+	}
+
+	// Return an AbstractModule instance and override the AbstractModule's install
+	// method.
+	public static AbstractModule override(final Iterable<? extends AbstractModule> modules,
+			final AbstractModule abstractModule) {
+		return new AbstractModule() {
+			@Override
+			public void install() {
+				final List<com.google.inject.Module> guiceModules = new ArrayList<>();
+				for (AbstractModule module : modules) {
+					bootstrapInjector.injectMembers(module);
+					guiceModules.add(module);
+				}
+				bootstrapInjector.injectMembers(abstractModule);
+				binder().install(Modules.override(guiceModules).with(abstractModule));
+			}
+		};
+	}
+
+	// Get config
+	protected final Config getConfig() {
+		return config;
 	}
 
 	protected final LinkedBindingBuilder<EventHandler> addEventHandlerBinding() {
@@ -250,22 +271,6 @@ import com.google.inject.util.Modules;
 
 	protected final <T> javax.inject.Provider<T> getProvider(TypeLiteral<T> typeLiteral) {
 		return binder.getProvider(Key.get(typeLiteral));
-	}
-
-	public static AbstractModule override(final Iterable<? extends AbstractModule> modules,
-			final AbstractModule abstractModule) {
-		return new AbstractModule() {
-			@Override
-			public void install() {
-				final List<com.google.inject.Module> guiceModules = new ArrayList<>();
-				for (AbstractModule module : modules) {
-					bootstrapInjector.injectMembers(module);
-					guiceModules.add(module);
-				}
-				bootstrapInjector.injectMembers(abstractModule);
-				binder().install(Modules.override(guiceModules).with(abstractModule));
-			}
-		};
 	}
 
 	public static AbstractModule emptyModule() {

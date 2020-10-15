@@ -195,7 +195,7 @@ public final class Controler implements ControlerI, MatsimServices, AllowsConfig
 	}
 
 	/**
-	 * Starts the iterations.
+	 * Start iterations.
 	 */
 	@Override
 	public final void run() {
@@ -212,6 +212,8 @@ public final class Controler implements ControlerI, MatsimServices, AllowsConfig
 		this.injectorCreated = true;
 
 		this.overrides = AbstractModule.override(Collections.singletonList(this.overrides), new AbstractModule() {
+			// Return an AbstractModule instance and override the AbstractModule's install
+			// method.
 			@Override
 			public void install() {
 				bind(Key.get(new TypeLiteral<List<AbstractQSimModule>>() {
@@ -226,6 +228,8 @@ public final class Controler implements ControlerI, MatsimServices, AllowsConfig
 		config.addConfigConsistencyChecker(new UnmaterializedConfigGroupChecker());
 
 		final Set<AbstractModule> standardModules = Collections.singleton(new AbstractModule() {
+			// Return an AbstractModule instance and override the AbstractModule's install
+			// method.
 			@Override
 			public void install() {
 				install(new NewControlerModule());
