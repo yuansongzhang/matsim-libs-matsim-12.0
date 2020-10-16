@@ -39,9 +39,11 @@ import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.scoring.ScoringFunctionFactory;
 
 import com.google.inject.Provider;
-
+/**
+ * Yuansong Zhang learning
+ */
 public interface MatsimServices extends IterationCounter {
-
+	// Class member method
 	IterationStopWatch getStopwatch();
 
 	TravelTime getLinkTravelTimes();

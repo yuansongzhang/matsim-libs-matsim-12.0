@@ -74,6 +74,9 @@ public final class Controler implements ControlerI, MatsimServices, AllowsConfig
 	// provided by the ability to set or add factories. If this is
 	// not sufficient, people should use AbstractController. kai, jan'13
 
+	/**
+	 * Class member variable
+	 */
 	public static final String DIRECTORY_ITERS = "ITERS";
 
 	public enum DefaultFiles {
@@ -107,11 +110,6 @@ public final class Controler implements ControlerI, MatsimServices, AllowsConfig
 	private com.google.inject.Injector injector;
 	private boolean injectorCreated = false;
 
-	@Override
-	public IterationStopWatch getStopwatch() {
-		return injector.getInstance(IterationStopWatch.class);
-	}
-
 	// DefaultControlerModule includes submodules. If you want less than what the
 	// Controler does
 	// by default, you can leave ControlerDefaultsModule out, look at what it does,
@@ -124,6 +122,11 @@ public final class Controler implements ControlerI, MatsimServices, AllowsConfig
 
 	private List<AbstractQSimModule> overridingQSimModules = new LinkedList<>();
 
+	// Class member method
+	@Override
+	public IterationStopWatch getStopwatch() {
+		return injector.getInstance(IterationStopWatch.class);
+	}
 	public static void main(final String[] args) {
 		if ((args == null) || (args.length == 0)) {
 			System.out.println("No argument given!");
@@ -217,7 +220,6 @@ public final class Controler implements ControlerI, MatsimServices, AllowsConfig
 			@Override
 			public void install() {
 				bind(Key.get(new TypeLiteral<List<AbstractQSimModule>>() {
-				}, Names.named("overrides"))).toInstance(overridingQSimModules);
 			}
 		});
 
@@ -233,7 +235,6 @@ public final class Controler implements ControlerI, MatsimServices, AllowsConfig
 			@Override
 			public void install() {
 				install(new NewControlerModule());
-				install(new ControlerDefaultCoreListenersModule());
 				for (AbstractModule module : modules) {
 					install(module);
 				}
