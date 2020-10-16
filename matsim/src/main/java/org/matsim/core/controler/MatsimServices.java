@@ -19,8 +19,7 @@
  *                                                                         *
  * *********************************************************************** */
 
- package org.matsim.core.controler;
-
+package org.matsim.core.controler;
 
 import org.matsim.analysis.CalcLinkStats;
 import org.matsim.analysis.IterationStopWatch;
@@ -39,6 +38,7 @@ import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.scoring.ScoringFunctionFactory;
 
 import com.google.inject.Provider;
+
 /**
  * Yuansong Zhang learning
  */
@@ -47,8 +47,6 @@ public interface MatsimServices extends IterationCounter {
 	IterationStopWatch getStopwatch();
 
 	TravelTime getLinkTravelTimes();
-
-	Provider<TripRouter> getTripRouterProvider();
 
 	TravelDisutility createTravelDisutilityCalculator();
 
@@ -61,8 +59,6 @@ public interface MatsimServices extends IterationCounter {
 	Scenario getScenario();
 
 	EventsManager getEvents();
-
-	com.google.inject.Injector getInjector();
 
 	CalcLinkStats getLinkStats();
 
@@ -77,5 +73,9 @@ public interface MatsimServices extends IterationCounter {
 	OutputDirectoryHierarchy getControlerIO();
 
 	void addControlerListener(ControlerListener controlerListener);
-	
+
+	Provider<TripRouter> getTripRouterProvider();
+
+	com.google.inject.Injector getInjector();
+
 }
