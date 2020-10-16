@@ -19,8 +19,11 @@
  *                                                                         *
  * *********************************************************************** */
 
- package org.matsim.core.controler;
+package org.matsim.core.controler;
 
+/**
+ * Yuansong Zhang learing
+ */
 public interface IterationCounter {
 	Integer getIterationNumber();
 }
