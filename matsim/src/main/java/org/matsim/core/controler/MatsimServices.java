@@ -74,6 +74,9 @@ public interface MatsimServices extends IterationCounter {
 
 	void addControlerListener(ControlerListener controlerListener);
 
+	/**
+	 * Google Guice
+	 */
 	Provider<TripRouter> getTripRouterProvider();
 
 	com.google.inject.Injector getInjector();
