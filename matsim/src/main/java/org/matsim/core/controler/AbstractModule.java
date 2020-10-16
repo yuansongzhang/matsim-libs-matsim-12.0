@@ -273,6 +273,7 @@ public abstract class AbstractModule implements Module {
 		return binder.getProvider(Key.get(typeLiteral));
 	}
 
+	// Get a total empty Module
 	public static AbstractModule emptyModule() {
 		return new AbstractModule() {
 			@Override

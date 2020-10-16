@@ -127,6 +127,7 @@ public final class Controler implements ControlerI, MatsimServices, AllowsConfig
 	public IterationStopWatch getStopwatch() {
 		return injector.getInstance(IterationStopWatch.class);
 	}
+
 	public static void main(final String[] args) {
 		if ((args == null) || (args.length == 0)) {
 			System.out.println("No argument given!");
@@ -148,6 +149,7 @@ public final class Controler implements ControlerI, MatsimServices, AllowsConfig
 	 *             contain the path to a local copy of the DTD file used in the
 	 *             configuration file.
 	 */
+	// Class constructor
 	public Controler(final String[] args) {
 		this(args.length > 0 ? args[0] : null, null, null);
 	}
@@ -164,6 +166,7 @@ public final class Controler implements ControlerI, MatsimServices, AllowsConfig
 		this(null, null, scenario);
 	}
 
+	// Key constructor
 	private Controler(final String configFileName, final Config config, Scenario scenario) {
 		if (scenario != null) {
 			// scenario already loaded (recommended):
