@@ -42,6 +42,10 @@ import org.matsim.core.utils.io.IOUtils;
  * @author mrieser
  * @author balmermi
  */
+
+/**
+ * Yuansong Zhang learning
+ */
 public class ConfigGroup implements MatsimExtensionPoint {
 	// this cannot be made final since many actual groups inherit from it
 
@@ -56,6 +60,9 @@ public class ConfigGroup implements MatsimExtensionPoint {
 
 	private final static Logger log = Logger.getLogger(ConfigGroup.class);
 
+	/**
+	 * Class constructor
+	 */
 	public ConfigGroup(final String name) {
 		this.name = name;
 		this.params = new TreeMap<>();
