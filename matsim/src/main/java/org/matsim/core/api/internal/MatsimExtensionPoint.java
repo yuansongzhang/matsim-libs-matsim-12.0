@@ -27,9 +27,12 @@ package org.matsim.core.api.internal;
  * it can be put to use.  In most cases, corresponding code should already exist in the tutorial section of
  * the matsim repository.  (Please write to us if such a pointer to example code does not exist.)
  * </ul>
- * 
- * @author nagel
  *
+ * @author nagel
+ */
+
+/*
+ * Yuansong Zhang learning
  */
 public interface MatsimExtensionPoint {
 

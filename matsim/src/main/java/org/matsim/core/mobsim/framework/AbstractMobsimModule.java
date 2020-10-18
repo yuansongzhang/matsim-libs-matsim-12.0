@@ -32,54 +32,53 @@ import com.google.inject.Module;
 import com.google.inject.util.Modules;
 
 /**
- * Yuansong Zhang
- * learning
+ * Yuansong Zhang learning
  */
 public abstract class AbstractMobsimModule extends AbstractModule {
-	private Optional<Config> config = Optional.empty();
-	private Optional<AbstractMobsimModule> parent = Optional.empty();
+    private Optional<Config> config = Optional.empty();
+    private Optional<AbstractMobsimModule> parent = Optional.empty();
 
-	public final void setConfig(Config config) {
-		this.config = Optional.of(config);
-	}
+    public final void setConfig(Config config) {
+        this.config = Optional.of(config);
+    }
 
-	public final void setParent(AbstractMobsimModule parent) {
-		this.parent = Optional.of(parent);
-	}
+    public final void setParent(AbstractMobsimModule parent) {
+        this.parent = Optional.of(parent);
+    }
 
-	protected final Config getConfig() {
-		if (config.isPresent()) {
-			return config.get();
-		}
+    protected final Config getConfig() {
+        if (config.isPresent()) {
+            return config.get();
+        }
 
-		if (parent.isPresent()) {
-			return parent.get().getConfig();
-		}
+        if (parent.isPresent()) {
+            return parent.get().getConfig();
+        }
 
-		throw new IllegalStateException(
-				"No config set. Did you try to use the module outside of the QSim initialization process?");
-	}
+        throw new IllegalStateException(
+                "No config set. Did you try to use the module outside of the QSim initialization process?");
+    }
 
-	protected final void configure() {
-		configureMobsim();
-	}
+    protected final void configure() {
+        configureMobsim();
+    }
 
-	protected abstract void configureMobsim();
+    protected abstract void configureMobsim();
 
-	public static AbstractMobsimModule overrideMobsimModules(Collection<AbstractMobsimModule> base,
-			List<AbstractMobsimModule> overrides) {
-		Module composite = Modules.override(base).with(overrides);
+    public static AbstractMobsimModule overrideMobsimModules(Collection<AbstractMobsimModule> base,
+                                                             List<AbstractMobsimModule> overrides) {
+        Module composite = Modules.override(base).with(overrides);
 
-		AbstractMobsimModule wrapper = new AbstractMobsimModule() {
-			@Override
-			protected void configureMobsim() {
-				install(composite);
-			}
-		};
+        AbstractMobsimModule wrapper = new AbstractMobsimModule() {
+            @Override
+            protected void configureMobsim() {
+                install(composite);
+            }
+        };
 
-		base.forEach(m -> m.setParent(wrapper));
-		overrides.forEach(m -> m.setParent(wrapper));
+        base.forEach(m -> m.setParent(wrapper));
+        overrides.forEach(m -> m.setParent(wrapper));
 
-		return wrapper;
-	}
+        return wrapper;
+    }
 }
