@@ -223,8 +223,10 @@ public final class Controler implements ControlerI, MatsimServices, AllowsConfig
 			@Override
 			public void install() {
 				bind(Key.get(new TypeLiteral<List<AbstractQSimModule>>() {
+                }, Names.named("overrides"))).toInstance(overridingQSimModules);
+                }
 			}
-		});
+		);
 
 		// check config consistency just before creating injector; sometimes, we can
 		// provide better error messages there:
