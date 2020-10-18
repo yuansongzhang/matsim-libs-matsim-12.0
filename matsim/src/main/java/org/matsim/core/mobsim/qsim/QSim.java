@@ -96,11 +96,12 @@ import com.google.inject.Injector;
  * "engines".</i>  Possibly, something that executes a leg is not really the same as an "engine", but this is what we have
  * for the time being.
  * <li> Engines that offer new modes also need to be registered as "DepartureHandler"s.
- *  * </ul>
+ * * </ul>
  * Future plans include: pull the agent counter write methods back into QSim (no big deal, I hope); pull the actstart/end,
  * agent departure/arrival back into QSim+engines; somewhat separate the teleportation engine and the activities engine from the
  * framework part of QSim.
  * <p></p>
+ *
  * @author dstrippgen
  * @author mrieser
  * @author dgrether
@@ -108,79 +109,81 @@ import com.google.inject.Injector;
  */
 public final class QSim extends Thread implements VisMobsim, Netsim, ActivityEndRescheduler {
 
-	final private static Logger log = Logger.getLogger(QSim.class);
+    final private static Logger log = Logger.getLogger(QSim.class);
 
-	/** time since last "info" */
-	private double infoTime = 0;
+    /**
+     * time since last "info"
+     */
+    private double infoTime = 0;
 
-	private static final int INFO_PERIOD = 3600;
-	//	private static final int INFO_PERIOD = 10;
+    private static final int INFO_PERIOD = 3600;
+    //	private static final int INFO_PERIOD = 10;
 
-	private final EventsManager events;
+    private final EventsManager events;
 
-	private NetsimEngine netEngine;
+    private NetsimEngine netEngine;
 
-	private final Collection<MobsimEngine> mobsimEngines = new ArrayList<>();
+    private final Collection<MobsimEngine> mobsimEngines = new ArrayList<>();
 
-	private final MobsimTimer simTimer;
+    private final MobsimTimer simTimer;
 
-	private TeleportationEngine teleportationEngine;
+    private TeleportationEngine teleportationEngine;
 
-	private WithinDayEngine withindayEngine = null;
+    private WithinDayEngine withindayEngine = null;
 
-	private final Date realWorldStarttime = new Date();
-	private double stopTime; // initialised in initSimTimer()
-	private final MobsimListenerManager listenerManager;
-	private final Scenario scenario;
-	private final List<ActivityHandler> activityHandlers = new ArrayList<>();
-	private final List<DepartureHandler> departureHandlers = new ArrayList<>();
-	private final org.matsim.core.mobsim.qsim.AgentCounter agentCounter;
-	private final Map<Id<Person>, MobsimAgent> agents = new LinkedHashMap<>();
-	private final IdMap<Vehicle, MobsimVehicle> vehicles = new IdMap<>(Vehicle.class);
-	private final List<AgentSource> agentSources = new ArrayList<>();
+    private final Date realWorldStarttime = new Date();
+    private double stopTime; // initialised in initSimTimer()
+    private final MobsimListenerManager listenerManager;
+    private final Scenario scenario;
+    private final List<ActivityHandler> activityHandlers = new ArrayList<>();
+    private final List<DepartureHandler> departureHandlers = new ArrayList<>();
+    private final org.matsim.core.mobsim.qsim.AgentCounter agentCounter;
+    private final Map<Id<Person>, MobsimAgent> agents = new LinkedHashMap<>();
+    private final IdMap<Vehicle, MobsimVehicle> vehicles = new IdMap<>(Vehicle.class);
+    private final List<AgentSource> agentSources = new ArrayList<>();
 
-	// for detailed run time analysis
-	public static boolean analyzeRunTimes = false;
-	private long startClockTime = 0;
-	private long qSimInternalTime = 0;
-	private final Map<MobsimEngine, AtomicLong> mobsimEngineRunTimes;
-	private ActivityEngine activityEngine;
+    // for detailed run time analysis
+    public static boolean analyzeRunTimes = false;
+    private long startClockTime = 0;
+    private long qSimInternalTime = 0;
+    private final Map<MobsimEngine, AtomicLong> mobsimEngineRunTimes;
+    private ActivityEngine activityEngine;
 
-	{
-		if (analyzeRunTimes) this.mobsimEngineRunTimes = new HashMap<>();
-		else this.mobsimEngineRunTimes = null;
-	}
+    {
+        if (analyzeRunTimes) this.mobsimEngineRunTimes = new HashMap<>();
+        else this.mobsimEngineRunTimes = null;
+    }
 
-	/*package (for tests)*/ final InternalInterface internalInterface = new InternalInterface() {
+    /*package (for tests)*/ final InternalInterface internalInterface = new InternalInterface() {
 
-		// These methods must be synchronized, because they are called back
-		// from possibly multi-threaded engines, and they access
-		// global mutable data.
+        // These methods must be synchronized, because they are called back
+        // from possibly multi-threaded engines, and they access
+        // global mutable data.
 
-		@Override
-		public synchronized void arrangeNextAgentState(MobsimAgent agent) {
-			QSim.this.arrangeNextAgentAction(agent);
-		}
+        @Override
+        public synchronized void arrangeNextAgentState(MobsimAgent agent) {
+            QSim.this.arrangeNextAgentAction(agent);
+        }
 
-		@Override
-		public QSim getMobsim() {
-			return QSim.this;
-		}
+        @Override
+        public QSim getMobsim() {
+            return QSim.this;
+        }
 
-		@Override
-		public synchronized void registerAdditionalAgentOnLink(final MobsimAgent planAgent) {
-			if (QSim.this.netEngine != null) {
-				QSim.this.netEngine.registerAdditionalAgentOnLink(planAgent);
-			}
-		}
+        @Override
+        public synchronized void registerAdditionalAgentOnLink(final MobsimAgent planAgent) {
+            if (QSim.this.netEngine != null) {
+                QSim.this.netEngine.registerAdditionalAgentOnLink(planAgent);
+            }
+        }
 
-		@Override
-		public synchronized MobsimAgent unregisterAdditionalAgentOnLink(Id<Person> agentId, Id<Link> linkId) {
-			if (QSim.this.netEngine != null) {
-				return QSim.this.netEngine.unregisterAdditionalAgentOnLink(agentId, linkId);
-			}
-			return null;
-		}
+        @Override
+        public synchronized MobsimAgent unregisterAdditionalAgentOnLink(Id<Person> agentId, Id<Link> linkId) {
+            if (QSim.this.netEngine != null) {
+                return QSim.this.netEngine.unregisterAdditionalAgentOnLink(agentId, linkId);
+            }
+            return null;
+        }
 
 //		@Override
 //		@Deprecated // use same method from QSim directly and try to get rid of the handle to internal interface. kai, mar'15
@@ -192,401 +195,402 @@ public final class QSim extends Thread implements VisMobsim, Netsim, ActivityEnd
 //			QSim.this.activityEngine.rescheduleActivityEnd(agent);
 //		}
 
-		@Override
-		public final List<DepartureHandler> getDepartureHandlers() {
-			return departureHandlers ;
-		}
-	};
+        @Override
+        public final List<DepartureHandler> getDepartureHandlers() {
+            return departureHandlers;
+        }
+    };
 
-	private final Collection<AgentTracker> agentTrackers = new ArrayList<>() ;
+    private final Collection<AgentTracker> agentTrackers = new ArrayList<>();
 
-	private final Injector childInjector;
+    private final Injector childInjector;
 //	private QVehicleFactory qVehicleFactory;
-	
-	@Override
-	public final void rescheduleActivityEnd(MobsimAgent agent) {
-		for( ActivityHandler activityHandler : this.activityHandlers ){
-			Gbl.assertNotNull( activityHandler );
-			activityHandler.rescheduleActivityEnd( agent );
-		}
-	}
 
-	/**
-	 * Constructs an instance of this simulation which does not do anything by itself, but accepts handlers for Activities and Legs.
-	 * Use this constructor if you want to plug together your very own simulation, i.e. you are writing some of the simulation
-	 * logic yourself.
-	 *
-	 * If you wish to use QSim as a product and run a simulation based on a Config file, rather use QSimFactory as your entry point.
-	 *
-	 */
-	@Inject
-	private QSim( final Scenario sc, EventsManager events, Injector childInjector ) {
-		this.scenario = sc;
-		if ( sc.getConfig().qsim().getNumberOfThreads() > 1) {
-			this.events = EventsUtils.getParallelFeedableInstance( events );
-		} else {
-			this.events = events;
-		}
-		this.listenerManager = new MobsimListenerManager( this );
-		this.agentCounter = new org.matsim.core.mobsim.qsim.AgentCounter();
-		this.simTimer = new MobsimTimer( sc.getConfig().qsim().getTimeStepSize());
-		
-		this.childInjector = childInjector ;
+    @Override
+    public final void rescheduleActivityEnd(MobsimAgent agent) {
+        for (ActivityHandler activityHandler : this.activityHandlers) {
+            Gbl.assertNotNull(activityHandler);
+            activityHandler.rescheduleActivityEnd(agent);
+        }
+    }
+
+    /**
+     * Constructs an instance of this simulation which does not do anything by itself, but accepts handlers for Activities and Legs.
+     * Use this constructor if you want to plug together your very own simulation, i.e. you are writing some of the simulation
+     * logic yourself.
+     * <p>
+     * If you wish to use QSim as a product and run a simulation based on a Config file, rather use QSimFactory as your entry point.
+     */
+    @Inject
+    private QSim(final Scenario sc, EventsManager events, Injector childInjector) {
+        this.scenario = sc;
+        if (sc.getConfig().qsim().getNumberOfThreads() > 1) {
+            this.events = EventsUtils.getParallelFeedableInstance(events);
+        } else {
+            this.events = events;
+        }
+        this.listenerManager = new MobsimListenerManager(this);
+        this.agentCounter = new org.matsim.core.mobsim.qsim.AgentCounter();
+        this.simTimer = new MobsimTimer(sc.getConfig().qsim().getTimeStepSize());
+
+        this.childInjector = childInjector;
 //		this.qVehicleFactory = qVehicleFactory;
-	}
+    }
 
-	// ============================================================================================================================
-	// "run" method:
+    // ============================================================================================================================
+    // "run" method:
 
-	@Override
-	public void run() {
-		try {
-			// Teleportation must be last (default) departure handler, so add it only before running:
-			this.departureHandlers.add(this.teleportationEngine);
+    @Override
+    public void run() {
+        try {
+            // Teleportation must be last (default) departure handler, so add it only before running:
+            this.departureHandlers.add(this.teleportationEngine);
 
-			// ActivityEngine must be last (=default) activity handler, so add it only before running:
-			this.activityHandlers.add( this.activityEngine ) ;
+            // ActivityEngine must be last (=default) activity handler, so add it only before running:
+            this.activityHandlers.add(this.activityEngine);
 
-			prepareSim();
-			this.listenerManager.fireQueueSimulationInitializedEvent();
+            prepareSim();
+            this.listenerManager.fireQueueSimulationInitializedEvent();
 
-			// Put agents into the handler for their first ("overnight") action,
-			// probably the ActivityEngine. This is done before the first
-			// beforeSimStepEvent, because the expectation seems to be
-			// (e.g. in OTFVis), that agents are doing something
-			// (can be located somewhere) before you execute a sim step.
-			// Agents can abort in this loop already, so we iterate over
-			// a defensive copy of the agent collection.
-			for (MobsimAgent agent : new ArrayList<>(this.agents.values())) {
-				arrangeNextAgentAction(agent);
-			}
+            // Put agents into the handler for their first ("overnight") action,
+            // probably the ActivityEngine. This is done before the first
+            // beforeSimStepEvent, because the expectation seems to be
+            // (e.g. in OTFVis), that agents are doing something
+            // (can be located somewhere) before you execute a sim step.
+            // Agents can abort in this loop already, so we iterate over
+            // a defensive copy of the agent collection.
+            for (MobsimAgent agent : new ArrayList<>(this.agents.values())) {
+                arrangeNextAgentAction(agent);
+            }
 
-			// do iterations
-			boolean doContinue = true;
-			while (doContinue) {
-				doContinue = doSimStep();
-			}
-		} finally {
-			// We really want to perform that. For instance, with QNetsimEngine, threads are cleaned up in this method.
-			// Without this finally, in case of a crash, threads are not closed, which lead to process hanging forever
-			// at least on the eth euler cluster (but not on our local machines at ivt!?) td oct 15
-			try {
-				cleanupSim();
-			} catch(Exception e) {
-				log.warn( "exception in finally block - " +
-						  "this may be a follow-up exception of an exception thrown in the try block.", e);
-			}
-		}
-	}
+            // do iterations
+            boolean doContinue = true;
+            while (doContinue) {
+                doContinue = doSimStep();
+            }
+        } finally {
+            // We really want to perform that. For instance, with QNetsimEngine, threads are cleaned up in this method.
+            // Without this finally, in case of a crash, threads are not closed, which lead to process hanging forever
+            // at least on the eth euler cluster (but not on our local machines at ivt!?) td oct 15
+            try {
+                cleanupSim();
+            } catch (Exception e) {
+                log.warn("exception in finally block - " +
+                        "this may be a follow-up exception of an exception thrown in the try block.", e);
+            }
+        }
+    }
 
-	// ============================================================================================================================
-	// prepareSim and related:
+    // ============================================================================================================================
+    // prepareSim and related:
 
-	/**
-	 * Prepare the simulation and get all the settings from the configuration.
-	 */
-	/*package*/ void prepareSim() {
-		events.initProcessing();
+    /**
+     * Prepare the simulation and get all the settings from the configuration.
+     */
+    /*package*/ void prepareSim() {
+        events.initProcessing();
 
-		createAgents();
-		this.initSimTimer();
-		this.infoTime = Math.floor(this.simTimer.getSimStartTime()
-				/ INFO_PERIOD)
-				* INFO_PERIOD; // infoTime may be < simStartTime, this ensures
-		// to print out the info at the very first
-		// timestep already
+        createAgents();
+        this.initSimTimer();
+        this.infoTime = Math.floor(this.simTimer.getSimStartTime()
+                / INFO_PERIOD)
+                * INFO_PERIOD; // infoTime may be < simStartTime, this ensures
+        // to print out the info at the very first
+        // timestep already
 
-		for (MobsimEngine mobsimEngine : this.mobsimEngines) {
-			mobsimEngine.onPrepareSim();
-		}
-	}
+        for (MobsimEngine mobsimEngine : this.mobsimEngines) {
+            mobsimEngine.onPrepareSim();
+        }
+    }
 
-	private void createAgents() {
-		for (AgentSource agentSource : this.agentSources) {
-			agentSource.insertAgentsIntoMobsim();
-		}
-	}
+    private void createAgents() {
+        for (AgentSource agentSource : this.agentSources) {
+            agentSource.insertAgentsIntoMobsim();
+        }
+    }
 
 //	public void createAndParkVehicleOnLink(Vehicle vehicle, Id<Link> linkId) {
 //		QVehicle qveh = this.qVehicleFactory.createQVehicle( vehicle ) ;
 //		addParkedVehicle ( qveh, linkId ) ;
 //	}
 
-	private static int wrnCnt2 = 0;
-	public void addParkedVehicle(MobsimVehicle veh, Id<Link> startLinkId) {
-		if (this.netEngine != null) {
-			this.netEngine.addParkedVehicle(veh, startLinkId);
-		} else {
-			if (wrnCnt2 < 1) {
-				log.warn( "not able to add parked vehicle since there is no netsim engine.  continuing anyway, but it may "
-						+ "not be clear what this means ...") ;
-				log.warn(Gbl.ONLYONCE);
-				wrnCnt2++;
-			}
-		}
-		if ( this.vehicles.containsKey( veh.getId() ) ) {
-			throw new RuntimeException( "vehicle with ID " + veh.getId() + " exists twice. Aborting ..." ) ;
-		}
-		this.vehicles.put( veh.getId(), veh ) ;
+    private static int wrnCnt2 = 0;
 
-		final Vehicles allvehicles = VehicleUtils.getOrCreateAllvehicles( scenario );
-		VehicleType vehType = veh.getVehicle().getType();
-		if ( !allvehicles.getVehicleTypes().containsKey( vehType.getId() ) ) {
-			allvehicles.addVehicleType( veh.getVehicle().getType() );
-		}
-		if ( !allvehicles.getVehicles().containsKey( veh.getVehicle().getId() ) ) {
-			allvehicles.addVehicle( veh.getVehicle() );
-		}
-		// yy one might want to check if the types/vehicles here are the same as in previous iterations. kai/kai, jan'20
-	}
-	
-	public Map<Id<Vehicle>,MobsimVehicle> getVehicles() {
-		return Collections.unmodifiableMap( this.vehicles ) ;
-	}
+    public void addParkedVehicle(MobsimVehicle veh, Id<Link> startLinkId) {
+        if (this.netEngine != null) {
+            this.netEngine.addParkedVehicle(veh, startLinkId);
+        } else {
+            if (wrnCnt2 < 1) {
+                log.warn("not able to add parked vehicle since there is no netsim engine.  continuing anyway, but it may "
+                        + "not be clear what this means ...");
+                log.warn(Gbl.ONLYONCE);
+                wrnCnt2++;
+            }
+        }
+        if (this.vehicles.containsKey(veh.getId())) {
+            throw new RuntimeException("vehicle with ID " + veh.getId() + " exists twice. Aborting ...");
+        }
+        this.vehicles.put(veh.getId(), veh);
 
-	private void cleanupSim() {
-		this.listenerManager.fireQueueSimulationBeforeCleanupEvent();
+        final Vehicles allvehicles = VehicleUtils.getOrCreateAllvehicles(scenario);
+        VehicleType vehType = veh.getVehicle().getType();
+        if (!allvehicles.getVehicleTypes().containsKey(vehType.getId())) {
+            allvehicles.addVehicleType(veh.getVehicle().getType());
+        }
+        if (!allvehicles.getVehicles().containsKey(veh.getVehicle().getId())) {
+            allvehicles.addVehicle(veh.getVehicle());
+        }
+        // yy one might want to check if the types/vehicles here are the same as in previous iterations. kai/kai, jan'20
+    }
 
-		boolean gotException = false;
-		for (MobsimEngine mobsimEngine : mobsimEngines) {
-			try {
-				// make sure all engines are cleaned up
-				mobsimEngine.afterSim();
-			}
-			catch (Exception e) {
-				log.error("got exception while cleaning up", e);
-				gotException=true;
-			}
-		}
+    public Map<Id<Vehicle>, MobsimVehicle> getVehicles() {
+        return Collections.unmodifiableMap(this.vehicles);
+    }
 
-		if (gotException) throw new RuntimeException( "got exception while cleaning up the QSim. Please check the error messages above for details.");
-		events.finishProcessing();
-		if (analyzeRunTimes) {
-			log.info("qsim internal cpu time (nanos): " + qSimInternalTime);
-			for (Entry<MobsimEngine, AtomicLong> entry : this.mobsimEngineRunTimes.entrySet()) {
-				log.info(entry.getKey().getClass().toString() + " cpu time (nanos): " + entry.getValue().get());				
-			}
-			log.info("");
-			if ( this.netEngine instanceof QNetsimEngineI ) {
-				((QNetsimEngineI)this.netEngine).printEngineRunTimes();
-				// (yy should somehow be in afterSim()).
-			}
-		}
-	}
+    private void cleanupSim() {
+        this.listenerManager.fireQueueSimulationBeforeCleanupEvent();
 
-	/**
-	 * Do one step of the simulation run.
-	 *
-	 * @return true if the simulation needs to continue
-	 */
-	/*package*/ boolean doSimStep() {
-		if (analyzeRunTimes) this.startClockTime = System.nanoTime();
+        boolean gotException = false;
+        for (MobsimEngine mobsimEngine : mobsimEngines) {
+            try {
+                // make sure all engines are cleaned up
+                mobsimEngine.afterSim();
+            } catch (Exception e) {
+                log.error("got exception while cleaning up", e);
+                gotException = true;
+            }
+        }
 
-		final double now = this.getSimTimer().getTimeOfDay();
+        if (gotException)
+            throw new RuntimeException("got exception while cleaning up the QSim. Please check the error messages above for details.");
+        events.finishProcessing();
+        if (analyzeRunTimes) {
+            log.info("qsim internal cpu time (nanos): " + qSimInternalTime);
+            for (Entry<MobsimEngine, AtomicLong> entry : this.mobsimEngineRunTimes.entrySet()) {
+                log.info(entry.getKey().getClass().toString() + " cpu time (nanos): " + entry.getValue().get());
+            }
+            log.info("");
+            if (this.netEngine instanceof QNetsimEngineI) {
+                ((QNetsimEngineI) this.netEngine).printEngineRunTimes();
+                // (yy should somehow be in afterSim()).
+            }
+        }
+    }
 
-		this.listenerManager.fireQueueSimulationBeforeSimStepEvent(now);
-		
-		if (analyzeRunTimes) this.qSimInternalTime += System.nanoTime() - this.startClockTime;
-		
-		/*
-		 * The WithinDayEngine has to perform its replannings before
-		 * the other engines simulate the sim step.
-		 */
-		if (this.withindayEngine != null) {
-			if (analyzeRunTimes) startClockTime = System.nanoTime();
-			this.withindayEngine.doSimStep(now);
-			if (analyzeRunTimes) this.mobsimEngineRunTimes.get(this.withindayEngine).addAndGet(System.nanoTime() - this.startClockTime);
-		}
+    /**
+     * Do one step of the simulation run.
+     *
+     * @return true if the simulation needs to continue
+     */
+    /*package*/ boolean doSimStep() {
+        if (analyzeRunTimes) this.startClockTime = System.nanoTime();
 
-		// "added" engines
-		for (MobsimEngine mobsimEngine : this.mobsimEngines) {
-			if (analyzeRunTimes) this.startClockTime = System.nanoTime();
-			
-			// withindayEngine.doSimStep(time) has already been called
-			if (mobsimEngine == this.withindayEngine) continue;
+        final double now = this.getSimTimer().getTimeOfDay();
 
-			mobsimEngine.doSimStep(now);
-			
-			if (analyzeRunTimes) this.mobsimEngineRunTimes.get(mobsimEngine).addAndGet(System.nanoTime() - this.startClockTime);
-		}
+        this.listenerManager.fireQueueSimulationBeforeSimStepEvent(now);
 
-		if (analyzeRunTimes) this.startClockTime = System.nanoTime();
-		
-		// console printout:
-		this.printSimLog(now);
-		boolean doContinue =  (this.agentCounter.isLiving() && (this.stopTime > now));
-		this.events.afterSimStep(now);
-		this.listenerManager.fireQueueSimulationAfterSimStepEvent(now);
+        if (analyzeRunTimes) this.qSimInternalTime += System.nanoTime() - this.startClockTime;
 
-		final QSimConfigGroup qsimConfigGroup = this.scenario.getConfig().qsim();
-		if ( qsimConfigGroup.getSimEndtimeInterpretation()==EndtimeInterpretation.onlyUseEndtime ) {
-			doContinue = now <= qsimConfigGroup.getEndTime().seconds();
-		}
+        /*
+         * The WithinDayEngine has to perform its replannings before
+         * the other engines simulate the sim step.
+         */
+        if (this.withindayEngine != null) {
+            if (analyzeRunTimes) startClockTime = System.nanoTime();
+            this.withindayEngine.doSimStep(now);
+            if (analyzeRunTimes)
+                this.mobsimEngineRunTimes.get(this.withindayEngine).addAndGet(System.nanoTime() - this.startClockTime);
+        }
 
-		if (doContinue) {
-			this.simTimer.incrementTime();
-		}
-		
-		if (analyzeRunTimes) this.qSimInternalTime += System.nanoTime() - this.startClockTime;
+        // "added" engines
+        for (MobsimEngine mobsimEngine : this.mobsimEngines) {
+            if (analyzeRunTimes) this.startClockTime = System.nanoTime();
 
-		return doContinue;
-	}
+            // withindayEngine.doSimStep(time) has already been called
+            if (mobsimEngine == this.withindayEngine) continue;
 
-	public void insertAgentIntoMobsim(final MobsimAgent agent) {
-		if (this.agents.containsKey(agent.getId())) {
-			throw new RuntimeException("Agent with same Id (" + agent.getId().toString() + ") already in mobsim; aborting ... ") ;
-		}
-		this.agents.put(agent.getId(), agent);
-		this.agentCounter.incLiving();
-		if ( agent instanceof HasPerson ){
-			final Population allpersons = PopulationUtils.getOrCreateAllpersons( scenario );
-			if ( !allpersons.getPersons().containsKey( ((HasPerson) agent).getPerson().getId() ) ){
-				allpersons.addPerson( ((HasPerson) agent).getPerson() );
-			}
-		}
-	}
+            mobsimEngine.doSimStep(now);
 
-	private void arrangeNextAgentAction(final MobsimAgent agent) {
-		switch( agent.getState() ) {
-		case ACTIVITY:
-			arrangeAgentActivity(agent);
-			break ;
-		case LEG:
-			this.arrangeAgentDeparture(agent);
-			break ;
-		case ABORT:
-			this.events.processEvent( new PersonStuckEvent(this.simTimer.getTimeOfDay(), agent.getId(), agent.getCurrentLinkId(), agent.getMode()));
+            if (analyzeRunTimes)
+                this.mobsimEngineRunTimes.get(mobsimEngine).addAndGet(System.nanoTime() - this.startClockTime);
+        }
 
-			// NOTE: in the same way as one can register departure handler or activity handler, we could allow to
-			// register abort handlers.  If someone ever comes to this place here and needs this.  kai, nov'17
-			
-			this.agents.remove(agent.getId()) ;
-			this.agentCounter.decLiving();
-			this.agentCounter.incLost();
-			break ;
-		default:
-			throw new RuntimeException("agent with unknown state (possibly null)") ;
-		}
-	}
+        if (analyzeRunTimes) this.startClockTime = System.nanoTime();
 
-	private void arrangeAgentActivity(final MobsimAgent agent) {
-		for (ActivityHandler activityHandler : this.activityHandlers) {
-			if (activityHandler.handleActivity(agent)) {
-				return;
-			}
-		}
-	}
+        // console printout:
+        this.printSimLog(now);
+        boolean doContinue = (this.agentCounter.isLiving() && (this.stopTime > now));
+        this.events.afterSimStep(now);
+        this.listenerManager.fireQueueSimulationAfterSimStepEvent(now);
 
-	/**
-	 * Informs the simulation that the specified agent wants to depart from its
-	 * current activity. The simulation can then put the agent onto its vehicle
-	 * on a link or teleport it to its destination.
-	 *
-	 */
-	private void arrangeAgentDeparture(final MobsimAgent agent) {
-		double now = this.getSimTimer().getTimeOfDay();
-		Id<Link> linkId = agent.getCurrentLinkId();
-		Gbl.assertIf( linkId!=null );
-		events.processEvent(new PersonDepartureEvent(now, agent.getId(), linkId, agent.getMode()));
+        final QSimConfigGroup qsimConfigGroup = this.scenario.getConfig().qsim();
+        if (qsimConfigGroup.getSimEndtimeInterpretation() == EndtimeInterpretation.onlyUseEndtime) {
+            doContinue = now <= qsimConfigGroup.getEndTime().seconds();
+        }
 
-		for (DepartureHandler departureHandler : this.departureHandlers) {
-			if (departureHandler.handleDeparture(now, agent, linkId)) {
-				return;
-			}
-		}
-		log.warn("no departure handler wanted to handle the departure of agent " + agent.getId());
-		// yy my intuition is that this should be followed by setting the agent state to abort. kai, nov'14
+        if (doContinue) {
+            this.simTimer.incrementTime();
+        }
 
-	}
+        if (analyzeRunTimes) this.qSimInternalTime += System.nanoTime() - this.startClockTime;
 
-	// ############################################################################################################################
-	// private methods
-	// ############################################################################################################################
+        return doContinue;
+    }
 
-	private void initSimTimer() {
-		QSimConfigGroup qSimConfigGroup = this.scenario.getConfig().qsim();
-		double configuredStartTime = qSimConfigGroup.getStartTime().orElse(0);
-		this.stopTime = qSimConfigGroup.getEndTime().orElse(Double.MAX_VALUE);
-		if (this.stopTime == 0) {
-			this.stopTime = Double.MAX_VALUE;
-		}
+    public void insertAgentIntoMobsim(final MobsimAgent agent) {
+        if (this.agents.containsKey(agent.getId())) {
+            throw new RuntimeException("Agent with same Id (" + agent.getId().toString() + ") already in mobsim; aborting ... ");
+        }
+        this.agents.put(agent.getId(), agent);
+        this.agentCounter.incLiving();
+        if (agent instanceof HasPerson) {
+            final Population allpersons = PopulationUtils.getOrCreateAllpersons(scenario);
+            if (!allpersons.getPersons().containsKey(((HasPerson) agent).getPerson().getId())) {
+                allpersons.addPerson(((HasPerson) agent).getPerson());
+            }
+        }
+    }
 
-		double simStartTime;
-		if (QSimConfigGroup.StarttimeInterpretation.maxOfStarttimeAndEarliestActivityEnd.equals(qSimConfigGroup.getSimStarttimeInterpretation())) {
-			double firstAgentStartTime = calculateFirstAgentStartTime();
-			simStartTime = Math.floor(Math.max(configuredStartTime, firstAgentStartTime));
-		} else if (QSimConfigGroup.StarttimeInterpretation.onlyUseStarttime.equals(qSimConfigGroup.getSimStarttimeInterpretation())) {
-			simStartTime = configuredStartTime;
-		} else {
-			throw new RuntimeException("unkonwn starttimeInterpretation; aborting ...");
-		}
+    private void arrangeNextAgentAction(final MobsimAgent agent) {
+        switch (agent.getState()) {
+            case ACTIVITY:
+                arrangeAgentActivity(agent);
+                break;
+            case LEG:
+                this.arrangeAgentDeparture(agent);
+                break;
+            case ABORT:
+                this.events.processEvent(new PersonStuckEvent(this.simTimer.getTimeOfDay(), agent.getId(), agent.getCurrentLinkId(), agent.getMode()));
 
-		this.simTimer.setSimStartTime(simStartTime);
-		this.simTimer.setTime(simStartTime);
+                // NOTE: in the same way as one can register departure handler or activity handler, we could allow to
+                // register abort handlers.  If someone ever comes to this place here and needs this.  kai, nov'17
 
-	}
+                this.agents.remove(agent.getId());
+                this.agentCounter.decLiving();
+                this.agentCounter.incLost();
+                break;
+            default:
+                throw new RuntimeException("agent with unknown state (possibly null)");
+        }
+    }
 
-	private double calculateFirstAgentStartTime() {
-		double firstAgentStartTime = Double.POSITIVE_INFINITY;
-		for (MobsimAgent agent : agents.values()) {
-			firstAgentStartTime = Math.min(firstAgentStartTime, agent.getActivityEndTime());
-		}
-		return firstAgentStartTime;
-	}
+    private void arrangeAgentActivity(final MobsimAgent agent) {
+        for (ActivityHandler activityHandler : this.activityHandlers) {
+            if (activityHandler.handleActivity(agent)) {
+                return;
+            }
+        }
+    }
 
-	// ############################################################################################################################
-	// utility methods (presumably no state change)
-	// ############################################################################################################################
+    /**
+     * Informs the simulation that the specified agent wants to depart from its
+     * current activity. The simulation can then put the agent onto its vehicle
+     * on a link or teleport it to its destination.
+     */
+    private void arrangeAgentDeparture(final MobsimAgent agent) {
+        double now = this.getSimTimer().getTimeOfDay();
+        Id<Link> linkId = agent.getCurrentLinkId();
+        Gbl.assertIf(linkId != null);
+        events.processEvent(new PersonDepartureEvent(now, agent.getId(), linkId, agent.getMode()));
 
-	private void printSimLog(final double time) {
-		if (time >= this.infoTime) {
-			//		if(true){
-			this.infoTime += INFO_PERIOD;
-			Date endtime = new Date();
-			long diffreal = (endtime.getTime() - this.realWorldStarttime
-					.getTime()) / 1000;
-			double diffsim = time - this.simTimer.getSimStartTime();
-			log.info("SIMULATION (NEW QSim) AT " + Time.writeTime(time)
-					+ " : #Veh=" + this.agentCounter.getLiving() + " lost="
-					+ this.agentCounter.getLost() + " simT=" + diffsim
-					+ "s realT=" + (diffreal) + "s; (s/r): "
-					+ (diffsim / (diffreal + Double.MIN_VALUE)));
-		}
-	}
+        for (DepartureHandler departureHandler : this.departureHandlers) {
+            if (departureHandler.handleDeparture(now, agent, linkId)) {
+                return;
+            }
+        }
+        log.warn("no departure handler wanted to handle the departure of agent " + agent.getId());
+        // yy my intuition is that this should be followed by setting the agent state to abort. kai, nov'14
 
-	// ############################################################################################################################
-	// no real functionality beyond this point
-	// ############################################################################################################################
+    }
 
-	@Override
-	public EventsManager getEventsManager() {
-		return events;
-	}
+    // ############################################################################################################################
+    // private methods
+    // ############################################################################################################################
 
-	@Override
-	public NetsimNetwork getNetsimNetwork() {
-		return this.netEngine.getNetsimNetwork();
-	}
+    private void initSimTimer() {
+        QSimConfigGroup qSimConfigGroup = this.scenario.getConfig().qsim();
+        double configuredStartTime = qSimConfigGroup.getStartTime().orElse(0);
+        this.stopTime = qSimConfigGroup.getEndTime().orElse(Double.MAX_VALUE);
+        if (this.stopTime == 0) {
+            this.stopTime = Double.MAX_VALUE;
+        }
 
-	@Override
-	public VisNetwork getVisNetwork() {
-		return this.netEngine.getNetsimNetwork();
-	}
+        double simStartTime;
+        if (QSimConfigGroup.StarttimeInterpretation.maxOfStarttimeAndEarliestActivityEnd.equals(qSimConfigGroup.getSimStarttimeInterpretation())) {
+            double firstAgentStartTime = calculateFirstAgentStartTime();
+            simStartTime = Math.floor(Math.max(configuredStartTime, firstAgentStartTime));
+        } else if (QSimConfigGroup.StarttimeInterpretation.onlyUseStarttime.equals(qSimConfigGroup.getSimStarttimeInterpretation())) {
+            simStartTime = configuredStartTime;
+        } else {
+            throw new RuntimeException("unkonwn starttimeInterpretation; aborting ...");
+        }
 
-	@Override
-	public Scenario getScenario() {
-		return this.scenario;
-	}
+        this.simTimer.setSimStartTime(simStartTime);
+        this.simTimer.setTime(simStartTime);
 
-	@Override
-	public MobsimTimer getSimTimer() {
-		return this.simTimer;
-	}
+    }
 
-	public void addMobsimEngine(MobsimEngine mobsimEngine) {
-		// yy in all of the instanceof expressions below, the implementation class needs to be replaced
-		// by a meaningful interface.  kai, oct'17
-		
+    private double calculateFirstAgentStartTime() {
+        double firstAgentStartTime = Double.POSITIVE_INFINITY;
+        for (MobsimAgent agent : agents.values()) {
+            firstAgentStartTime = Math.min(firstAgentStartTime, agent.getActivityEndTime());
+        }
+        return firstAgentStartTime;
+    }
+
+    // ############################################################################################################################
+    // utility methods (presumably no state change)
+    // ############################################################################################################################
+
+    private void printSimLog(final double time) {
+        if (time >= this.infoTime) {
+            //		if(true){
+            this.infoTime += INFO_PERIOD;
+            Date endtime = new Date();
+            long diffreal = (endtime.getTime() - this.realWorldStarttime
+                    .getTime()) / 1000;
+            double diffsim = time - this.simTimer.getSimStartTime();
+            log.info("SIMULATION (NEW QSim) AT " + Time.writeTime(time)
+                    + " : #Veh=" + this.agentCounter.getLiving() + " lost="
+                    + this.agentCounter.getLost() + " simT=" + diffsim
+                    + "s realT=" + (diffreal) + "s; (s/r): "
+                    + (diffsim / (diffreal + Double.MIN_VALUE)));
+        }
+    }
+
+    // ############################################################################################################################
+    // no real functionality beyond this point
+    // ############################################################################################################################
+
+    @Override
+    public EventsManager getEventsManager() {
+        return events;
+    }
+
+    @Override
+    public NetsimNetwork getNetsimNetwork() {
+        return this.netEngine.getNetsimNetwork();
+    }
+
+    @Override
+    public VisNetwork getVisNetwork() {
+        return this.netEngine.getNetsimNetwork();
+    }
+
+    @Override
+    public Scenario getScenario() {
+        return this.scenario;
+    }
+
+    @Override
+    public MobsimTimer getSimTimer() {
+        return this.simTimer;
+    }
+
+    public void addMobsimEngine(MobsimEngine mobsimEngine) {
+        // yy in all of the instanceof expressions below, the implementation class needs to be replaced
+        // by a meaningful interface.  kai, oct'17
+
 //		if (mobsimEngine instanceof TransitQSimEngine) {
 //			if (this.transitEngine != null) {
 //				log.warn("pre-existing transitEngine != null; will be overwritten; with the current design, " +
@@ -595,68 +599,68 @@ public final class QSim extends Thread implements VisMobsim, Netsim, ActivityEnd
 //			this.transitEngine = (TransitQSimEngine) mobsimEngine;
 //		}
 
-		// yy note that what follows here somewhat interacts with the QSimProvider, which is doing similar things.  I just fixed a resulting misunderstanding re
-		// ActivityEngine, but presumably more thinking should be invested here.  kai, mar'19
+        // yy note that what follows here somewhat interacts with the QSimProvider, which is doing similar things.  I just fixed a resulting misunderstanding re
+        // ActivityEngine, but presumably more thinking should be invested here.  kai, mar'19
 
-		if ( mobsimEngine instanceof AgentTracker ) {
-			agentTrackers.add((AgentTracker) mobsimEngine);
-		}
-		if (mobsimEngine instanceof ActivityEngine){
-			this.activityEngine = (ActivityEngine) mobsimEngine;
-		}
-		if ( mobsimEngine instanceof HasAgentTracker ) {
-			agentTrackers.add(((HasAgentTracker) mobsimEngine).getAgentTracker());
-		}
-		if (mobsimEngine instanceof NetsimEngine) {
-			this.netEngine = (NetsimEngine) mobsimEngine;
-		}
-		if (mobsimEngine instanceof TeleportationEngine) {
-			this.teleportationEngine = (TeleportationEngine) mobsimEngine;
-		}
-		if (mobsimEngine instanceof WithinDayEngine) {
-			this.withindayEngine = (WithinDayEngine) mobsimEngine;
-		}
-		mobsimEngine.setInternalInterface(this.internalInterface);
-		this.mobsimEngines.add(mobsimEngine);
-		
-		if (analyzeRunTimes) this.mobsimEngineRunTimes.put(mobsimEngine, new AtomicLong());
-	}
+        if (mobsimEngine instanceof AgentTracker) {
+            agentTrackers.add((AgentTracker) mobsimEngine);
+        }
+        if (mobsimEngine instanceof ActivityEngine) {
+            this.activityEngine = (ActivityEngine) mobsimEngine;
+        }
+        if (mobsimEngine instanceof HasAgentTracker) {
+            agentTrackers.add(((HasAgentTracker) mobsimEngine).getAgentTracker());
+        }
+        if (mobsimEngine instanceof NetsimEngine) {
+            this.netEngine = (NetsimEngine) mobsimEngine;
+        }
+        if (mobsimEngine instanceof TeleportationEngine) {
+            this.teleportationEngine = (TeleportationEngine) mobsimEngine;
+        }
+        if (mobsimEngine instanceof WithinDayEngine) {
+            this.withindayEngine = (WithinDayEngine) mobsimEngine;
+        }
+        mobsimEngine.setInternalInterface(this.internalInterface);
+        this.mobsimEngines.add(mobsimEngine);
 
-	@Override
-	public AgentCounter getAgentCounter() {
-		return this.agentCounter;
-	}
+        if (analyzeRunTimes) this.mobsimEngineRunTimes.put(mobsimEngine, new AtomicLong());
+    }
 
-	public void addDepartureHandler(DepartureHandler departureHandler) {
-		if (!(departureHandler instanceof TeleportationEngine)) {
-			// We add the teleportation handler manually later
-			this.departureHandlers.add(departureHandler);
-		}
-	}
+    @Override
+    public AgentCounter getAgentCounter() {
+        return this.agentCounter;
+    }
 
-	public void addActivityHandler(ActivityHandler activityHandler) {
-		if ( ! ( activityHandler instanceof ActivityEngine ) ){
-			// We add the ActivityEngine manually later
-			Gbl.assertNotNull( activityHandler );
-			this.activityHandlers.add( activityHandler );
-		}
-	}
+    public void addDepartureHandler(DepartureHandler departureHandler) {
+        if (!(departureHandler instanceof TeleportationEngine)) {
+            // We add the teleportation handler manually later
+            this.departureHandlers.add(departureHandler);
+        }
+    }
 
-	/**
-	 * Adds the QueueSimulationListener instance given as parameters as listener
-	 * to this QueueSimulation instance.
-	 */
-	@Override
-	public void addQueueSimulationListeners(MobsimListener listener) {
-		this.listenerManager.addQueueSimulationListener(listener);
-	}
+    public void addActivityHandler(ActivityHandler activityHandler) {
+        if (!(activityHandler instanceof ActivityEngine)) {
+            // We add the ActivityEngine manually later
+            Gbl.assertNotNull(activityHandler);
+            this.activityHandlers.add(activityHandler);
+        }
+    }
 
-	@Inject
-	void addQueueSimulationListeners(Set<MobsimListener> listeners) {
-		for (MobsimListener listener : listeners) {
-			this.listenerManager.addQueueSimulationListener(listener);
-		}
-	}
+    /**
+     * Adds the QueueSimulationListener instance given as parameters as listener
+     * to this QueueSimulation instance.
+     */
+    @Override
+    public void addQueueSimulationListeners(MobsimListener listener) {
+        this.listenerManager.addQueueSimulationListener(listener);
+    }
+
+    @Inject
+    void addQueueSimulationListeners(Set<MobsimListener> listeners) {
+        for (MobsimListener listener : listeners) {
+            this.listenerManager.addQueueSimulationListener(listener);
+        }
+    }
 
 //	/**
 //	 * Only OTFVis is allowed to use this. If you want access to the TransitQSimEngine,
@@ -667,56 +671,56 @@ public final class QSim extends Thread implements VisMobsim, Netsim, ActivityEnd
 //	public TransitQSimEngine getTransitEngine() {
 //		return this.transitEngine;
 //	}
-	// see new getAgentTrackers method.  kai, nov'17
+    // see new getAgentTrackers method.  kai, nov'17
 
-	@Override
-	public Map<Id<Person>, MobsimAgent> getAgents() {
-		return Collections.unmodifiableMap(this.agents);
-	}
+    @Override
+    public Map<Id<Person>, MobsimAgent> getAgents() {
+        return Collections.unmodifiableMap(this.agents);
+    }
 
-	public void addAgentSource(AgentSource agentSource) {
-		this.agentSources.add(agentSource);
-	}
+    public void addAgentSource(AgentSource agentSource) {
+        this.agentSources.add(agentSource);
+    }
 
-	@Override
-	public VisData getNonNetworkAgentSnapshots() {
-		return new VisData() {
+    @Override
+    public VisData getNonNetworkAgentSnapshots() {
+        return new VisData() {
 
-			@Override
-			public Collection<AgentSnapshotInfo> addAgentSnapshotInfo(Collection<AgentSnapshotInfo> positions) {
-				for (MobsimEngine mobsimEngine : mobsimEngines) {
-					if (mobsimEngine instanceof VisData) {
-						VisData visData = (VisData) mobsimEngine;
-						positions = visData.addAgentSnapshotInfo(positions);
-					}
-				}
-				return positions;
-			}
-		};
-	}
+            @Override
+            public Collection<AgentSnapshotInfo> addAgentSnapshotInfo(Collection<AgentSnapshotInfo> positions) {
+                for (MobsimEngine mobsimEngine : mobsimEngines) {
+                    if (mobsimEngine instanceof VisData) {
+                        VisData visData = (VisData) mobsimEngine;
+                        positions = visData.addAgentSnapshotInfo(positions);
+                    }
+                }
+                return positions;
+            }
+        };
+    }
 
-	public Collection<AgentTracker> getAgentTrackers() {
-		return Collections.unmodifiableCollection(agentTrackers) ;
-	}
-	
-	public Injector getChildInjector() {
-		return this.childInjector  ;
-	}
-	
-	public final void addNetworkChangeEvent( NetworkChangeEvent event ) {
-		// used (and thus implicitly tested) by bdi-abm-integration project.  A separate core test would be good. kai, feb'18
-		
-		boolean processed = false ;
-		for ( MobsimEngine engine : this.mobsimEngines ) {
-			if ( engine instanceof NetworkChangeEventsEngineI ) {
-				((NetworkChangeEventsEngineI) engine).addNetworkChangeEvent( event );
-				processed = true ;
-			}
-		}
-		if ( !processed ) {
-			throw new RuntimeException("received a network change event, but did not process it.  Maybe " +
-											   "the network change events engine was not set up for the qsim?  Aborting ...") ;
-		}
-	}
-	
+    public Collection<AgentTracker> getAgentTrackers() {
+        return Collections.unmodifiableCollection(agentTrackers);
+    }
+
+    public Injector getChildInjector() {
+        return this.childInjector;
+    }
+
+    public final void addNetworkChangeEvent(NetworkChangeEvent event) {
+        // used (and thus implicitly tested) by bdi-abm-integration project.  A separate core test would be good. kai, feb'18
+
+        boolean processed = false;
+        for (MobsimEngine engine : this.mobsimEngines) {
+            if (engine instanceof NetworkChangeEventsEngineI) {
+                ((NetworkChangeEventsEngineI) engine).addNetworkChangeEvent(event);
+                processed = true;
+            }
+        }
+        if (!processed) {
+            throw new RuntimeException("received a network change event, but did not process it.  Maybe " +
+                    "the network change events engine was not set up for the qsim?  Aborting ...");
+        }
+    }
+
 }
