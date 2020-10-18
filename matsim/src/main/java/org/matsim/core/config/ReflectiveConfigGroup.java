@@ -77,440 +77,429 @@ import org.matsim.core.api.internal.MatsimExtensionPoint;
  *
  * @author thibautd
  */
+
+/**
+ * Yuansong Zhang learning
+ */
 public abstract class ReflectiveConfigGroup extends ConfigGroup implements MatsimExtensionPoint {
-	private static final Logger log =
-		Logger.getLogger(ReflectiveConfigGroup.class);
+    private static final Logger log =
+            Logger.getLogger(ReflectiveConfigGroup.class);
 
-	private final boolean storeUnknownParameters;
+    private final boolean storeUnknownParameters;
 
-	private final Map<String, Method> setters;
-	private final Map<String, Method> stringGetters;
+    private final Map<String, Method> setters;
+    private final Map<String, Method> stringGetters;
 
-	// /////////////////////////////////////////////////////////////////////////
-	// Construction
-	// /////////////////////////////////////////////////////////////////////////
-	/**
-	 * Creates an instance which will crash if an unknown parameter name
-	 * is given.
-	 *
-	 * @param name the name of the module in the config file.
-	 */
-	public ReflectiveConfigGroup(final String name) {
-		this( name , false );
-	}
+    // /////////////////////////////////////////////////////////////////////////
+    // Construction
+    // /////////////////////////////////////////////////////////////////////////
 
-	/**
-	 * Creates an instance, giving the choice on whether unknown parameter names result
-	 * in a crash or just in the parameter value being stored as a String.
-	 *
-	 * @param name the name of the module in the config file.
-	 * @param storeUnknownParametersAsStrings if true, when no annotated getter
-	 * or setter is found for a parameter name, the parameters are stored using
-	 * the default {@link ConfigGroup} behavior. This is not that safe, so be careful.
-	 */
-	public ReflectiveConfigGroup(
-			final String name,
-			final boolean storeUnknownParametersAsStrings) {
-		super(name);
-		this.storeUnknownParameters = storeUnknownParametersAsStrings;
-		setters = getSetters();
-		stringGetters = getStringGetters();
+    /**
+     * Creates an instance which will crash if an unknown parameter name
+     * is given.
+     *
+     * @param name the name of the module in the config file.
+     */
+    public ReflectiveConfigGroup(final String name) {
+        this(name, false);
+    }
 
-		if ( !setters.keySet().equals( stringGetters.keySet() ) ) {
-			throw new InconsistentModuleException( "setters and getters inconsistent" );
-		}
+    /**
+     * Creates an instance, giving the choice on whether unknown parameter names result
+     * in a crash or just in the parameter value being stored as a String.
+     *
+     * @param name                            the name of the module in the config file.
+     * @param storeUnknownParametersAsStrings if true, when no annotated getter
+     *                                        or setter is found for a parameter name, the parameters are stored using
+     *                                        the default {@link ConfigGroup} behavior. This is not that safe, so be careful.
+     */
+    public ReflectiveConfigGroup(final String name, final boolean storeUnknownParametersAsStrings) {
+        super(name);
+        this.storeUnknownParameters = storeUnknownParametersAsStrings;
+        setters = getSetters();
+        stringGetters = getStringGetters();
 
-		checkConvertNullAnnotations();
-	}
+        if (!setters.keySet().equals(stringGetters.keySet())) {
+            throw new InconsistentModuleException("setters and getters inconsistent");
+        }
 
-	private void checkConvertNullAnnotations() {
-		final Class<? extends ReflectiveConfigGroup> c = getClass();
+        checkConvertNullAnnotations();
+    }
 
-		final Method[] allMethods = c.getDeclaredMethods();
+    private void checkConvertNullAnnotations() {
+        final Class<? extends ReflectiveConfigGroup> c = getClass();
 
-		for (Method m : allMethods) {
-			final StringGetter annotation = m.getAnnotation( StringGetter.class );
-			if ( annotation != null ) {
-				final Method g = getStringGetters().get( annotation.value() );
+        final Method[] allMethods = c.getDeclaredMethods();
 
-				if ( m.isAnnotationPresent( DoNotConvertNull.class ) != g.isAnnotationPresent( DoNotConvertNull.class ) ) {
-					throw new InconsistentModuleException( "Inconsistent annotation of getter and setter with ConvertNull in "+getClass().getName() );
-				}
-			}
-		}
-	}
+        for (Method m : allMethods) {
+            final StringGetter annotation = m.getAnnotation(StringGetter.class);
+            if (annotation != null) {
+                final Method g = getStringGetters().get(annotation.value());
 
-	private Map<String, Method> getStringGetters() {
-		final Map<String, Method> gs = new HashMap<String, Method>();
-		final Class<? extends ReflectiveConfigGroup> c = getClass();
+                if (m.isAnnotationPresent(DoNotConvertNull.class) != g.isAnnotationPresent(DoNotConvertNull.class)) {
+                    throw new InconsistentModuleException("Inconsistent annotation of getter and setter with ConvertNull in " + getClass().getName());
+                }
+            }
+        }
+    }
 
-		final Method[] allMethods = c.getDeclaredMethods();
+    private Map<String, Method> getStringGetters() {
+        final Map<String, Method> gs = new HashMap<String, Method>();
+        final Class<? extends ReflectiveConfigGroup> c = getClass();
 
-		for (Method m : allMethods) {
-			final StringGetter annotation = m.getAnnotation( StringGetter.class );
-			if ( annotation != null ) {
-				checkGetterValidity( m );
-				final Method old = gs.put( annotation.value() , m );
-				if ( old != null ) {
-					throw new InconsistentModuleException( "several string getters for "+annotation.value() );
-				}
-			}
-		}
+        final Method[] allMethods = c.getDeclaredMethods();
 
-		return gs;
-	}
+        for (Method m : allMethods) {
+            final StringGetter annotation = m.getAnnotation(StringGetter.class);
+            if (annotation != null) {
+                checkGetterValidity(m);
+                final Method old = gs.put(annotation.value(), m);
+                if (old != null) {
+                    throw new InconsistentModuleException("several string getters for " + annotation.value());
+                }
+            }
+        }
 
-	private static void checkGetterValidity(final Method m) {
-		if ( m.getParameterTypes().length > 0 ) {
-			throw new InconsistentModuleException( "getter "+m+" has parameters" );
-		}
+        return gs;
+    }
 
-		if ( m.getReturnType().equals( Void.TYPE ) ) {
-			throw new InconsistentModuleException( "getter "+m+" has void return type" );
-		}
-	}
+    private static void checkGetterValidity(final Method m) {
+        if (m.getParameterTypes().length > 0) {
+            throw new InconsistentModuleException("getter " + m + " has parameters");
+        }
 
-	private Map<String, Method> getSetters() {
-		final Map<String, Method> ss = new HashMap<String, Method>();
-		final Class<? extends ReflectiveConfigGroup> c = getClass();
+        if (m.getReturnType().equals(Void.TYPE)) {
+            throw new InconsistentModuleException("getter " + m + " has void return type");
+        }
+    }
 
-		final Method[] allMethods = c.getDeclaredMethods();
+    private Map<String, Method> getSetters() {
+        final Map<String, Method> ss = new HashMap<String, Method>();
+        final Class<? extends ReflectiveConfigGroup> c = getClass();
 
-		for (Method m : allMethods) {
-			final StringSetter annotation = m.getAnnotation( StringSetter.class );
-			if ( annotation != null ) {
-				checkSetterValidity( m );
-				final Method old = ss.put( annotation.value() , m );
-				if ( old != null ) {
-					throw new InconsistentModuleException( "several string setters for "+annotation.value() );
-				}
-			}
-		}
+        final Method[] allMethods = c.getDeclaredMethods();
 
-		return ss;
-	}
+        for (Method m : allMethods) {
+            final StringSetter annotation = m.getAnnotation(StringSetter.class);
+            if (annotation != null) {
+                checkSetterValidity(m);
+                final Method old = ss.put(annotation.value(), m);
+                if (old != null) {
+                    throw new InconsistentModuleException("several string setters for " + annotation.value());
+                }
+            }
+        }
 
-	private static void checkSetterValidity(final Method m) {
-		final Class<?>[] params = m.getParameterTypes();
+        return ss;
+    }
 
-		if (params.length != 1) {
-			throw new InconsistentModuleException( "setter "+m+" has "+params.length+" parameters instead of one" );
-		}
+    private static void checkSetterValidity(final Method m) {
+        final Class<?>[] params = m.getParameterTypes();
 
-		final Collection<Class<?>> allowedParameterTypes =
-			Arrays.<Class<?>>asList(
-					String.class,
-					Float.class, Double.class, Integer.class, Long.class, Boolean.class, Character.class, Byte.class, Short.class,
-					Float.TYPE, Double.TYPE, Integer.TYPE, Long.TYPE, Boolean.TYPE, Character.TYPE, Byte.TYPE, Short.TYPE);
-        if ( !allowedParameterTypes.contains( params[ 0 ] ) && !params[ 0 ].isEnum() ) {
-			throw new InconsistentModuleException( "setter "+m+" gets a "+params[ 0 ]+". Valid types are String, primitive types and their wrapper classes, and enumerations. "+
-					"Other types are fine as parameters, but you will need to implement conversion strategies in the String setters." );
-		}
-	}
+        if (params.length != 1) {
+            throw new InconsistentModuleException("setter " + m + " has " + params.length + " parameters instead of one");
+        }
 
-	// /////////////////////////////////////////////////////////////////////////
-	// module methods
-	// /////////////////////////////////////////////////////////////////////////
-	@Override
-	public final void addParam(
-			final String param_name,
-			final String value) {
-		final Method setter = setters.get( param_name );
+        final Collection<Class<?>> allowedParameterTypes =
+                Arrays.<Class<?>>asList(
+                        String.class,
+                        Float.class, Double.class, Integer.class, Long.class, Boolean.class, Character.class, Byte.class, Short.class,
+                        Float.TYPE, Double.TYPE, Integer.TYPE, Long.TYPE, Boolean.TYPE, Character.TYPE, Byte.TYPE, Short.TYPE);
+        if (!allowedParameterTypes.contains(params[0]) && !params[0].isEnum()) {
+            throw new InconsistentModuleException("setter " + m + " gets a " + params[0] + ". Valid types are String, primitive types and their wrapper classes, and enumerations. " +
+                    "Other types are fine as parameters, but you will need to implement conversion strategies in the String setters.");
+        }
+    }
 
-		if (setter == null) {
-			if ( !storeUnknownParameters ) {
-				throw new IllegalArgumentException(
-						"Module "+getName()+" of type "+getClass().getName()+
-						" doesn't accept unkown parameters. Parameter "+param_name+
-						" is not part of the valid parameters: "+setters.keySet() );
-			}
-			log.warn( "unknown parameter "+param_name+" for group "+getName()+". Here are the valid parameter names: "+setters.keySet() );
-			log.warn( "Only the string value will be remembered" );
-			super.addParam( param_name , value );
-			return;
-		}
+    // /////////////////////////////////////////////////////////////////////////
+    // module methods
+    // /////////////////////////////////////////////////////////////////////////
+    @Override
+    public final void addParam(
+            final String param_name,
+            final String value) {
+        final Method setter = setters.get(param_name);
 
-		try {
-			invokeSetter( setter , value );
-			log.trace( "value "+value+" successfully set for field "+param_name+" for group "+getName() );
-		}
-		catch (InvocationTargetException e) {
-			// this exception wraps Throwables intercepted in the invocation of the setter.
-			// Avoid multiple wrappings (exception wrapped in InvocationTargetException
-			// itself wrapped in a RuntimeException), as it makes error messages
-			// messy.
-			final Throwable cause = e.getCause();
-			if ( cause instanceof RuntimeException ) {
-				throw (RuntimeException) cause;
-			}
+        if (setter == null) {
+            if (!storeUnknownParameters) {
+                throw new IllegalArgumentException(
+                        "Module " + getName() + " of type " + getClass().getName() +
+                                " doesn't accept unkown parameters. Parameter " + param_name +
+                                " is not part of the valid parameters: " + setters.keySet());
+            }
+            log.warn("unknown parameter " + param_name + " for group " + getName() + ". Here are the valid parameter names: " + setters.keySet());
+            log.warn("Only the string value will be remembered");
+            super.addParam(param_name, value);
+            return;
+        }
 
-			if ( cause instanceof Error ) {
-				throw (Error) cause;
-			}
+        try {
+            invokeSetter(setter, value);
+            log.trace("value " + value + " successfully set for field " + param_name + " for group " + getName());
+        } catch (InvocationTargetException e) {
+            // this exception wraps Throwables intercepted in the invocation of the setter.
+            // Avoid multiple wrappings (exception wrapped in InvocationTargetException
+            // itself wrapped in a RuntimeException), as it makes error messages
+            // messy.
+            final Throwable cause = e.getCause();
+            if (cause instanceof RuntimeException) {
+                throw (RuntimeException) cause;
+            }
 
-			throw new RuntimeException( cause );
-		}
-		catch (IllegalAccessException e) {
-			throw new RuntimeException( e );
-		}
-	}
+            if (cause instanceof Error) {
+                throw (Error) cause;
+            }
 
-	private void invokeSetter(
-			final Method setter,
-			final String value) throws IllegalAccessException, InvocationTargetException {
-		// do not care about access modifier:
-		// if a method is tagged with the StringSetter
-		// annotation, we are supposed to access it.
-		// This *is* safe.
-		final boolean accessible = setter.isAccessible();
-		setter.setAccessible( true );
+            throw new RuntimeException(cause);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
-		final Class<?>[] params = setter.getParameterTypes();
-		assert params.length == 1; // already checked at constr.
+    private void invokeSetter(
+            final Method setter,
+            final String value) throws IllegalAccessException, InvocationTargetException {
+        // do not care about access modifier:
+        // if a method is tagged with the StringSetter
+        // annotation, we are supposed to access it.
+        // This *is* safe.
+        final boolean accessible = setter.isAccessible();
+        setter.setAccessible(true);
 
-		final Class<?> type = params[ 0 ];
+        final Class<?>[] params = setter.getParameterTypes();
+        assert params.length == 1; // already checked at constr.
 
-		if ( value.equals( "null" ) && !setter.isAnnotationPresent( DoNotConvertNull.class ) ) {
-			setter.invoke( this , new Object[]{ null } );
-		}
-		else if ( type.equals( String.class ) ) {
-			setter.invoke( this , value );
-		}
-		else if ( type.equals( Float.class ) || type.equals( Float.TYPE ) ) {
-			setter.invoke( this , Float.parseFloat( value ) );
-		}
-		else if ( type.equals( Double.class ) || type.equals( Double.TYPE ) ) {
-			setter.invoke( this , Double.parseDouble( value ) );
-		}
-		else if ( type.equals( Integer.class ) || type.equals( Integer.TYPE ) ) {
-			setter.invoke( this , Integer.parseInt( value ) );
-		}
-		else if ( type.equals( Long.class ) || type.equals( Long.TYPE ) ) {
-			setter.invoke( this , Long.parseLong( value ) );
-		}
-		else if ( type.equals( Boolean.class ) || type.equals( Boolean.TYPE ) ) {
-			setter.invoke( this , Boolean.parseBoolean( value ) );
-		}
-		else if ( type.equals( Character.class ) || type.equals( Character.TYPE ) ) {
-			if ( value.length() != 1 ) throw new IllegalArgumentException( value+" is not a single char!" );
-			setter.invoke( this , value.toCharArray()[ 0 ] );
-		}
-		else if ( type.equals( Byte.class ) || type.equals( Byte.TYPE ) ) {
-			setter.invoke( this , Byte.parseByte( value ) );
-		}
-		else if ( type.equals( Short.class ) || type.equals( Short.TYPE ) ) {
-			setter.invoke( this , Short.parseShort( value ) );
-		}
-		else if ( type.isEnum() ) {
-			try {
-				setter.invoke(
-						this,
-						Enum.valueOf(
-							type.asSubclass( Enum.class ),
-							value ) );
-			}
-			catch (IllegalArgumentException e) {
-				// happens when the string does not correspond to any enum values.
-				// Surprisingly, the default error message does not print the possible
-				// values: do it here, so that the user gets an idea of what went wrong
-				final StringBuilder comment =
-					new StringBuilder(
-							"Error trying to set value "+value+
-							" for type "+type.getName()+
-							": possible values are " );
+        final Class<?> type = params[0];
 
-				final Object[] consts = type.getEnumConstants();
-				for ( int i = 0; i < consts.length; i++ ) {
-					comment.append( consts[ i ].toString() );
-					if ( i < consts.length - 1 ) comment.append( ", " );
-				}
+        if (value.equals("null") && !setter.isAnnotationPresent(DoNotConvertNull.class)) {
+            setter.invoke(this, new Object[]{null});
+        } else if (type.equals(String.class)) {
+            setter.invoke(this, value);
+        } else if (type.equals(Float.class) || type.equals(Float.TYPE)) {
+            setter.invoke(this, Float.parseFloat(value));
+        } else if (type.equals(Double.class) || type.equals(Double.TYPE)) {
+            setter.invoke(this, Double.parseDouble(value));
+        } else if (type.equals(Integer.class) || type.equals(Integer.TYPE)) {
+            setter.invoke(this, Integer.parseInt(value));
+        } else if (type.equals(Long.class) || type.equals(Long.TYPE)) {
+            setter.invoke(this, Long.parseLong(value));
+        } else if (type.equals(Boolean.class) || type.equals(Boolean.TYPE)) {
+            setter.invoke(this, Boolean.parseBoolean(value));
+        } else if (type.equals(Character.class) || type.equals(Character.TYPE)) {
+            if (value.length() != 1) throw new IllegalArgumentException(value + " is not a single char!");
+            setter.invoke(this, value.toCharArray()[0]);
+        } else if (type.equals(Byte.class) || type.equals(Byte.TYPE)) {
+            setter.invoke(this, Byte.parseByte(value));
+        } else if (type.equals(Short.class) || type.equals(Short.TYPE)) {
+            setter.invoke(this, Short.parseShort(value));
+        } else if (type.isEnum()) {
+            try {
+                setter.invoke(
+                        this,
+                        Enum.valueOf(
+                                type.asSubclass(Enum.class),
+                                value));
+            } catch (IllegalArgumentException e) {
+                // happens when the string does not correspond to any enum values.
+                // Surprisingly, the default error message does not print the possible
+                // values: do it here, so that the user gets an idea of what went wrong
+                final StringBuilder comment =
+                        new StringBuilder(
+                                "Error trying to set value " + value +
+                                        " for type " + type.getName() +
+                                        ": possible values are ");
 
-				throw new IllegalArgumentException( comment.toString() , e );
-			}
-		}
-		else {
-			throw new RuntimeException( "no method to handle type "+type );
-		}
+                final Object[] consts = type.getEnumConstants();
+                for (int i = 0; i < consts.length; i++) {
+                    comment.append(consts[i].toString());
+                    if (i < consts.length - 1) comment.append(", ");
+                }
 
-		setter.setAccessible( accessible );
-	}
+                throw new IllegalArgumentException(comment.toString(), e);
+            }
+        } else {
+            throw new RuntimeException("no method to handle type " + type);
+        }
 
-	@Override
-	public final String getValue(final String param_name) {
-		final Method getter = stringGetters.get( param_name );
+        setter.setAccessible(accessible);
+    }
 
-		try {
-			if (getter != null) {
-				// do not care about access modifier:
-				// if a method is tagged with the StringGetter
-				// annotation, we are supposed to access it.
-				// This *is* safe.
-				final boolean accessible = getter.isAccessible();
-				getter.setAccessible( true );
-				final Object result = getter.invoke( this );
-				getter.setAccessible( accessible );
+    @Override
+    public final String getValue(final String param_name) {
+        final Method getter = stringGetters.get(param_name);
 
-				if ( result == null ) {
-					if ( getter.isAnnotationPresent( DoNotConvertNull.class ) ) {
-						log.error( "getter for parameter "+param_name+" of module "+getName()+" returned null." );
-						log.error( "This is not allowed for this getter." );
+        try {
+            if (getter != null) {
+                // do not care about access modifier:
+                // if a method is tagged with the StringGetter
+                // annotation, we are supposed to access it.
+                // This *is* safe.
+                final boolean accessible = getter.isAccessible();
+                getter.setAccessible(true);
+                final Object result = getter.invoke(this);
+                getter.setAccessible(accessible);
 
-						throw new NullPointerException( "getter for parameter "+param_name+" of module "+getClass().getName()+" ("+getName()+") returned null." );
-					}
-					return null;
-				}
+                if (result == null) {
+                    if (getter.isAnnotationPresent(DoNotConvertNull.class)) {
+                        log.error("getter for parameter " + param_name + " of module " + getName() + " returned null.");
+                        log.error("This is not allowed for this getter.");
 
-				final String value = ""+result;
+                        throw new NullPointerException("getter for parameter " + param_name + " of module " + getClass().getName() + " (" + getName() + ") returned null.");
+                    }
+                    return null;
+                }
 
-				if ( value.equals( "null" ) && !getter.isAnnotationPresent( DoNotConvertNull.class ) ) {
-					throw new RuntimeException( "parameter "+param_name+" understands null pointers for IO. As a consequence, the \"null\" String is not a valid value for "+getter.getName() );
-				}
+                final String value = "" + result;
 
-				return value;
-			}
-		}
-		catch (InvocationTargetException e) {
-			// this exception wraps Throwables intercepted in the invocation of the getter.
-			// Avoid multiple wrappings (exception wrapped in InvocationTargetException
-			// itself wrapped in a RuntimeException), as it makes error messages
-			// messy.
-			final Throwable cause = e.getCause();
-			if ( cause instanceof RuntimeException ) {
-				throw (RuntimeException) cause;
-			}
+                if (value.equals("null") && !getter.isAnnotationPresent(DoNotConvertNull.class)) {
+                    throw new RuntimeException("parameter " + param_name + " understands null pointers for IO. As a consequence, the \"null\" String is not a valid value for " + getter.getName());
+                }
 
-			if ( cause instanceof Error ) {
-				throw (Error) cause;
-			}
+                return value;
+            }
+        } catch (InvocationTargetException e) {
+            // this exception wraps Throwables intercepted in the invocation of the getter.
+            // Avoid multiple wrappings (exception wrapped in InvocationTargetException
+            // itself wrapped in a RuntimeException), as it makes error messages
+            // messy.
+            final Throwable cause = e.getCause();
+            if (cause instanceof RuntimeException) {
+                throw (RuntimeException) cause;
+            }
 
-			throw new RuntimeException( cause );
-		}
-		catch (IllegalAccessException e) {
-			throw new RuntimeException( e );
-		}
+            if (cause instanceof Error) {
+                throw (Error) cause;
+            }
 
-		if ( !storeUnknownParameters ) {
-			throw new IllegalArgumentException(
-					"Module "+getName()+" of type "+getClass().getName()+
-					" doesn't store unkown parameters. Parameter "+param_name+
-					" is not part of the valid parameters: "+stringGetters.keySet() );
-		}
+            throw new RuntimeException(cause);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
 
-		log.warn( "no getter found for param "+param_name+": trying parent method" );
-		return super.getValue( param_name );
-	}
+        if (!storeUnknownParameters) {
+            throw new IllegalArgumentException(
+                    "Module " + getName() + " of type " + getClass().getName() +
+                            " doesn't store unkown parameters. Parameter " + param_name +
+                            " is not part of the valid parameters: " + stringGetters.keySet());
+        }
 
-	@Override
-	public final Map<String, String> getParams() {
-		final Map<String, String> map = super.getParams();
+        log.warn("no getter found for param " + param_name + ": trying parent method");
+        return super.getValue(param_name);
+    }
 
-		for (String f : setters.keySet()) {
-			addParameterToMap( map , f );
-		}
+    @Override
+    public final Map<String, String> getParams() {
+        final Map<String, String> map = super.getParams();
 
-		return map;
-	}
+        for (String f : setters.keySet()) {
+            addParameterToMap(map, f);
+        }
 
-	/**
-	 * Comments for parameters which setter get an enum type are automatically generated,
-	 * containing a list of possible values. They can be overriden by subclasses without
-	 * problems.
-	 *
-	 * <br>
-	 * it is recommended for subclasses to get this map using <tt>super.getComments()</tt>
-	 * and fill it with additional comments, rather than generate an empty map.
-	 */
-	@Override
-	public Map<String, String> getComments() {
-		// generate some default comments.
-		final Map<String, String> comments = super.getComments();
+        return map;
+    }
 
-		for ( Map.Entry<String, Method> entry : setters.entrySet() ) {
-			final String paramName = entry.getKey();
-			if ( comments.containsKey( paramName ) ) {
-				// at the time of implementation, this is not possible,
-				// but who knows? Do not override something already there.
-				continue;
-			}
+    /**
+     * Comments for parameters which setter get an enum type are automatically generated,
+     * containing a list of possible values. They can be overriden by subclasses without
+     * problems.
+     *
+     * <br>
+     * it is recommended for subclasses to get this map using <tt>super.getComments()</tt>
+     * and fill it with additional comments, rather than generate an empty map.
+     */
+    @Override
+    public Map<String, String> getComments() {
+        // generate some default comments.
+        final Map<String, String> comments = super.getComments();
 
-			final Method setter = entry.getValue();
+        for (Map.Entry<String, Method> entry : setters.entrySet()) {
+            final String paramName = entry.getKey();
+            if (comments.containsKey(paramName)) {
+                // at the time of implementation, this is not possible,
+                // but who knows? Do not override something already there.
+                continue;
+            }
 
-			final Class<?>[] params = setter.getParameterTypes();
-			assert params.length == 1; // already checked at constr.
+            final Method setter = entry.getValue();
 
-			final Class<?> type = params[ 0 ];
+            final Class<?>[] params = setter.getParameterTypes();
+            assert params.length == 1; // already checked at constr.
 
-			if ( type.isEnum() ) {
-				// generate an automatic comment containing the possible values for enum types
-				final StringBuilder comment = new StringBuilder( "Possible values: " );
-				final Object[] consts = type.getEnumConstants();
+            final Class<?> type = params[0];
 
-				for ( int i = 0; i < consts.length; i++ ) {
-					comment.append( consts[ i ].toString() );
-					if ( i < consts.length - 1 ) comment.append( ", " );
-				}
+            if (type.isEnum()) {
+                // generate an automatic comment containing the possible values for enum types
+                final StringBuilder comment = new StringBuilder("Possible values: ");
+                final Object[] consts = type.getEnumConstants();
 
-				comments.put( paramName , comment.toString() );
-			}
-		}
+                for (int i = 0; i < consts.length; i++) {
+                    comment.append(consts[i].toString());
+                    if (i < consts.length - 1) comment.append(", ");
+                }
 
-		return comments;
-	}
+                comments.put(paramName, comment.toString());
+            }
+        }
 
-	// /////////////////////////////////////////////////////////////////////////
-	// annotations
-	// /////////////////////////////////////////////////////////////////////////
-	/**
-	 * use to annotate the methods which should be used to read the string
-	 * values.
-	 * See the class description for a description of the valid signature of the
-	 * annotated method.
-	 */
-	@Documented
-	@Retention( RetentionPolicy.RUNTIME )
-	public static @interface StringSetter {
-		/**
-		 * the name of the field in the XML document
-		 */
-		String value();
-	}
+        return comments;
+    }
 
-	/**
-	 * use to annotate the methods which should be used to get the string
-	 * values.
-	 * the methods must take no parameter and return an Object or primitive
-	 * data type which string representations is the one which should appear in the
-	 * xml.
-	 */
-	@Documented
-	@Retention( RetentionPolicy.RUNTIME )
-	public static @interface StringGetter {
-		/**
-		 * the name of the field in the XML document
-		 */
-		String value();
-	}
+    // /////////////////////////////////////////////////////////////////////////
+    // annotations
+    // /////////////////////////////////////////////////////////////////////////
 
-	/**
-	 * Setters for which the "null" string should NOT be converted
-	 * to the <tt>null</tt> pointer, and getter from which a <tt>null</tt>
-	 * pointer should NOT be accepted and converted to the "null" string,
-	 * should be annotated with this.
-	 * <br>
-	 * Note that both the setter and the getter for a given parameter,
-	 * or none of them, must be annotated. If not, an {@link InconsistentModuleException}
-	 * will be thrown.
-	 */
-	@Documented
-	@Retention( RetentionPolicy.RUNTIME )
-	public static @interface DoNotConvertNull {}
+    /**
+     * use to annotate the methods which should be used to read the string
+     * values.
+     * See the class description for a description of the valid signature of the
+     * annotated method.
+     */
+    @Documented
+    @Retention(RetentionPolicy.RUNTIME)
+    public static @interface StringSetter {
+        /**
+         * the name of the field in the XML document
+         */
+        String value();
+    }
 
-	public static class InconsistentModuleException extends RuntimeException {
-		private static final long serialVersionUID = 1L;
+    /**
+     * use to annotate the methods which should be used to get the string
+     * values.
+     * the methods must take no parameter and return an Object or primitive
+     * data type which string representations is the one which should appear in the
+     * xml.
+     */
+    @Documented
+    @Retention(RetentionPolicy.RUNTIME)
+    public static @interface StringGetter {
+        /**
+         * the name of the field in the XML document
+         */
+        String value();
+    }
 
-		private InconsistentModuleException(final String msg) {
-			super( msg );
-		}
-	}
+    /**
+     * Setters for which the "null" string should NOT be converted
+     * to the <tt>null</tt> pointer, and getter from which a <tt>null</tt>
+     * pointer should NOT be accepted and converted to the "null" string,
+     * should be annotated with this.
+     * <br>
+     * Note that both the setter and the getter for a given parameter,
+     * or none of them, must be annotated. If not, an {@link InconsistentModuleException}
+     * will be thrown.
+     */
+    @Documented
+    @Retention(RetentionPolicy.RUNTIME)
+    public static @interface DoNotConvertNull {
+    }
+
+    public static class InconsistentModuleException extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        private InconsistentModuleException(final String msg) {
+            super(msg);
+        }
+    }
 }
 
