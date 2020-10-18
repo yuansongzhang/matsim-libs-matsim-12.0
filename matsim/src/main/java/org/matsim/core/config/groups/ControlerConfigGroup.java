@@ -30,8 +30,7 @@ import org.matsim.core.utils.misc.StringUtils;
 import java.util.*;
 
 /**
- * Yuansong Zhang
- * learning
+ * Yuansong Zhang learning
  */
 public final class ControlerConfigGroup extends ReflectiveConfigGroup {
 	private static final Logger log = Logger.getLogger( ControlerConfigGroup.class );
@@ -98,6 +97,9 @@ public final class ControlerConfigGroup extends ReflectiveConfigGroup {
 	private CompressionType compressionType = CompressionType.gzip;
 	private OverwriteFileSetting overwriteFileSetting = OverwriteFileSetting.failIfDirectoryExists;
 
+	/**
+	 * Class constructor
+	 */
 	public ControlerConfigGroup() {
 		super(GROUP_NAME);
 	}
